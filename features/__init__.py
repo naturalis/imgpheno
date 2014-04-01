@@ -47,6 +47,8 @@ def split_by_mask(img, mask):
     """
     if img.shape[:2] != mask.shape[:2]:
         raise ValueError("All the input arrays must have same shape")
+    if len(mask.shape) != 2:
+        raise ValueError("Mask must be binary")
 
     contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     for pointset in contours:
@@ -239,12 +241,11 @@ def shape360(src, img):
 
     # List farthes points ordered by defect size, decreasing.
     major_defects = sorted(major_defects, reverse=True)
-    major_defects = [x[1] for x in major_defects]
 
     # Get the major defect closest to and right from the center.
     start = None
     min_dist = None
-    for point in major_defects:
+    for d, point in major_defects:
         if point[0] > center[0]:
             dist = point_dist(point, center)
             if min_dist == None or dist < min_dist:

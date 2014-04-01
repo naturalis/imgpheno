@@ -24,7 +24,6 @@ no_image = True
 center = None
 angle = 0
 radius = 0
-color = BLUE
 
 def main():
     global args
@@ -71,14 +70,14 @@ def main():
     return 0
 
 def set_angle(x):
-    global angle, color
+    global angle
     angle = x
     if angle > 90:
         angle = 180 - angle
-        color = RED
         sys.stderr.write("angle: %s -> %s\n" % (x, angle))
     else:
-        color = BLUE
+        angle *= -1
+
     draw_angle()
 
 def set_radius(x):
@@ -101,7 +100,7 @@ def process_image(args, path):
     # Resize the image if it is larger then the threshold.
     max_px = max(img.shape[:2])
     if args.maxdim and max_px > args.maxdim:
-        rf = args.maxdim / max_px
+        rf = float(args.maxdim) / max_px
         img = cv2.resize(img, None, fx=rf, fy=rf)
 
     # Perform segmentation
@@ -112,7 +111,9 @@ def process_image(args, path):
     contour, center, defects, start = ft.shape360(img, bin_mask)
 
     # Draw landmarks
-    for point in defects[:6]:
+    for d, point in defects:
+        if d < 10:
+            break
         cv2.circle(img, point, 5, BLUE, -1)
     cv2.circle(img, center, 5, GREEN, -1)
     cv2.circle(img, start, 5, RED, -1)
@@ -120,7 +121,7 @@ def process_image(args, path):
     # Fit an ellipse (and draw it)
     if len(contour) >= 6:
         box = cv2.fitEllipse(contour)
-        cv2.ellipse(img, box, GREEN)
+        #cv2.ellipse(img, box, GREEN)
         angle = box[2]
 
         #set_angle(angle)
@@ -129,7 +130,7 @@ def process_image(args, path):
     draw_angle()
 
 def draw_angle():
-    global angle, center, color, img, no_image
+    global angle, center, img, no_image, radius
 
     if no_image:
         img = np.zeros((500, 500, 3), np.uint8)
@@ -142,11 +143,17 @@ def draw_angle():
     # Convert angle from degrees to radians.
     angle_rad = math.radians(angle)
 
-    # Calculate (x,y) for given radius.
-    end = np.array((math.cos(angle_rad) * radius, math.sin(angle_rad) * radius)).astype('uint8')
+    # Calculate (x,y) for given radius and angle.
+    x = int(math.sin(angle_rad) * radius)
+    y = int(math.cos(angle_rad) * radius)
+    end_point = np.array((x, y))
 
     # Draw the angle.
-    cv2.line(img, tuple(center - end), tuple(center + end), color)
+    if angle < 0:
+        color = BLUE
+    else:
+        color = RED
+    cv2.line(img, tuple(center + end_point), tuple(center - end_point), color)
 
     cv2.imshow('image', img)
 
