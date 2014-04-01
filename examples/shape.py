@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import logging
 import math
 import mimetypes
 import os
@@ -28,18 +29,27 @@ radius = 0
 def main():
     global args
 
+    if sys.flags.debug:
+        # Print debug messages if the -d flag is set for the Python interpreter.
+        logging.basicConfig(level=logging.DEBUG, format='%(levelname)s %(message)s')
+    else:
+        # Otherwise just show log messages of type INFO.
+        logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
+
+    # Aprse arguments
     parser = argparse.ArgumentParser(description='Get the rough shape from the main object')
-    parser.add_argument('path', metavar='PATH', help='Path to image folder')
+    parser.add_argument('--path', metavar='PATH', required=False, help='Path to image folder')
     parser.add_argument('--maxdim', metavar='N', type=float, default=500.0, help="Limit the maximum dimension for an input image. The input image is resized if width or height is larger than N. Default is 500.")
     parser.add_argument('--iters', metavar='N', type=int, default=5, help="The number of segmentation iterations. Default is 5.")
     parser.add_argument('--margin', metavar='N', type=int, default=1, help="The margin of the foreground rectangle from the edges. Default is 1.")
     args = parser.parse_args()
 
-    images = get_image_files(args.path)
-
-    if len(images) < 1:
-        sys.stderr.write("No images found\n")
-        return
+    # Get list of images from the specified directory
+    if args.path:
+        images = get_image_files(args.path)
+        if len(images) < 1:
+            logging.info("No images found")
+            return 0
 
     # Create UI
     cv2.namedWindow('image')
@@ -49,8 +59,12 @@ def main():
 
     i = 0
     while True:
-        process_image(args, images[i])
-        #draw_angle()
+        if args.path:
+            # Load images from path if PATH is given.
+            process_image(args, images[i])
+        else:
+            # Otherwise just draw the angle on a black background.
+            draw_angle()
 
         k = cv2.waitKey(0) & 0xFF
 
@@ -63,6 +77,7 @@ def main():
             if i < 0:
                 i = len(images) - 1
         elif k == ord('q'):
+            logging.info("Exit by user")
             break
 
     cv2.destroyAllWindows()
@@ -74,7 +89,7 @@ def set_angle(x):
     angle = x
     if angle > 90:
         angle = 180 - angle
-        sys.stderr.write("angle: %s -> %s\n" % (x, angle))
+        logging.info("Angle converted from %s to %s degrees in opposite direction" % (x, angle))
     else:
         angle *= -1
 
@@ -92,10 +107,10 @@ def process_image(args, path):
 
     img = cv2.imread(path)
     if img == None or img.size == 0:
-        sys.stderr.write("Failed to read %s\n" % path)
-        return 1
+        logging.info("Failed to read %s" % path)
+        return
 
-    sys.stderr.write("Processing %s...\n" % path)
+    logging.info("Processing %s..." % path)
 
     # Resize the image if it is larger then the threshold.
     max_px = max(img.shape[:2])
