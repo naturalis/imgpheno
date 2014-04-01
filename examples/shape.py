@@ -17,6 +17,7 @@ import numpy as np
 import features as ft
 
 BLUE = (255,0,0)
+CYAN = (255,255,0)
 GREEN = (0,255,0)
 RED = (0,0,255)
 
@@ -87,12 +88,6 @@ def main():
 def set_angle(x):
     global angle
     angle = x
-    if angle > 90:
-        angle = 180 - angle
-        logging.info("Angle converted from %s to %s degrees in opposite direction" % (x, angle))
-    else:
-        angle *= -1
-
     draw_angle()
 
 def set_radius(x):
@@ -131,7 +126,7 @@ def process_image(args, path):
             break
         cv2.circle(img, point, 5, BLUE, -1)
     cv2.circle(img, center, 5, GREEN, -1)
-    cv2.circle(img, start, 5, RED, -1)
+    cv2.circle(img, start, 5, CYAN, -1)
 
     # Fit an ellipse (and draw it)
     if len(contour) >= 6:
@@ -155,20 +150,13 @@ def draw_angle():
     cv2.line(img, (0, center[1]), (img.shape[1], center[1]), GREEN)
     cv2.line(img, (center[0], 0), (center[0], img.shape[0]), GREEN)
 
-    # Convert angle from degrees to radians.
-    angle_rad = math.radians(angle)
-
-    # Calculate (x,y) for given radius and angle.
-    x = int(math.sin(angle_rad) * radius)
-    y = int(math.cos(angle_rad) * radius)
-    end_point = np.array((x, y))
-
     # Draw the angle.
+    angle_line = ft.angled_line(center, angle, radius)
     if angle < 0:
         color = BLUE
     else:
         color = RED
-    cv2.line(img, tuple(center + end_point), tuple(center - end_point), color)
+    cv2.line(img, angle_line[0], angle_line[1], color)
 
     cv2.imshow('image', img)
 

@@ -212,17 +212,20 @@ def simple_outline(img, resolution=10):
 
     return np.array(outline)
 
-def shape360(src, img):
+def shape360(src, img, defect_thresh=10):
     """Returns a shape feature from a binary image.
 
     Shape is returned as an array of 360 values. The returned shape is
-    rotation invariant.
+    rotation invariant up to an angle of 90 degrees.
     """
     if len(img.shape) != 2:
         raise ValueError("Input image must be binary")
 
     # Obtain contours (all points) from the mask.
     contour = get_largest_countour(img.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
+    if len(contour) < 6:
+        raise ValueError("Contour must have at least 6 points, %d found" % len(contour))
 
     # Get the center.
     m = cv2.moments(img, binaryImage = True)
@@ -232,27 +235,61 @@ def shape360(src, img):
     hull = cv2.convexHull(contour, returnPoints = False)
     defects = cv2.convexityDefects(contour, hull)
 
-    # Get the major defects.
+    # Get the defects and sort them decreasingly.
     major_defects = []
     for i in range(defects.shape[0]):
         s,e,f,d = defects[i,0]
         far = tuple(contour[f][0])
         major_defects.append( (d/256.0, far) )
-
-    # List farthes points ordered by defect size, decreasing.
     major_defects = sorted(major_defects, reverse=True)
 
-    # Get the major defect closest to and right from the center.
+    # Fit an ellipse to get the contour angle.
+    box = cv2.fitEllipse(contour)
+    angle = box[2]
+
+    # Get a line for the angle.
+    line = angled_line(center, angle, max(img.shape))
+
+    # Get the major defect closest to the center and left from the vertical
+    # axis. Use this point as the starting point.
     start = None
-    min_dist = None
+    dmin = None
     for d, point in major_defects:
-        if point[0] > center[0]:
+        if d < defect_thresh:
+            break
+        if side_of_line(line, point) > 0:
             dist = point_dist(point, center)
-            if min_dist == None or dist < min_dist:
-                min_dist = dist
+            if dmin == None or dist < dmin:
+                dmin = dist
                 start = point
 
     return (contour, center, major_defects, start)
+
+def angled_line(center, angle, radius, horizontal=False):
+    """Returns an angled line.
+
+    The `angle` must be in degrees. The line's center is set at `center` and
+    the line length is twice the `radius`. The line's angle is based on the
+    vertical axis if `horizontal` is False.
+    """
+    if not isinstance(center, np.ndarray):
+        center = np.array(center)
+
+    if angle > 90:
+        angle = 180 - angle
+    else:
+        angle *= -1
+    angle = math.radians(angle)
+
+    x = int(math.sin(angle) * radius)
+    y = int(math.cos(angle) * radius)
+
+    if horizontal:
+        end = np.array((y, x))
+    else:
+        end = np.array((x, y))
+
+    return (tuple(center - end), tuple(center + end))
 
 def point_dist(p1, p2):
     """Return the distance between two points.
@@ -266,11 +303,27 @@ def point_dist(p1, p2):
 def get_orientation(img):
     """Returns the orientation from a binary image.
 
+    The orientation is returned in degrees.
+
     Source: http://stackoverflow.com/a/14720823/466781
     """
     m = cv2.moments(img, binaryImage = True)
     theta = 0.5 * math.atan( (2 * m['mu11']) / (m['mu20'] - m['mu02']) )
-    theta = (theta / math.pi) * 180
-    return theta
+    return math.degrees(theta)
+
+def side_of_line(l, p):
+    """Returns on which side of line `l` point `p` lies.
+
+    Line `l` must be a tuple of two tuples, which are the start and end
+    point of the line. Point `p` is a single tuple.
+
+    Returned value is negative, 0, or positive when the point is right,
+    collinear, or left from the line, respectively. If the line is horizontal,
+    then the returned value is positive.
+
+    Source: http://stackoverflow.com/a/3461533/466781
+    """
+    a,b = l
+    return ((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]))
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
