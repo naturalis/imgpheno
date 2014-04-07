@@ -62,9 +62,9 @@ def split_image(path, args):
 
         name = os.path.basename(path)
         name = os.path.splitext(name)
-        path = "%s_%d.png" % (name[0], i)
-        path = os.path.join(args.output, path)
-        cv2.imwrite(path, im)
+        out_path = "%s_%d.png" % (name[0], i)
+        out_path = os.path.join(args.output, out_path)
+        cv2.imwrite(out_path, im)
 
     return 0
 
