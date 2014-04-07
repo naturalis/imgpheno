@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import itertools
 import logging
 import math
 import mimetypes
@@ -16,16 +17,20 @@ import numpy as np
 
 import features as ft
 
+BLACK = (0,0,0)
+GRAY = (105,105,105)
 BLUE = (255,0,0)
 CYAN = (255,255,0)
 GREEN = (0,255,0)
 RED = (0,0,255)
 
+img_src = None
 img = None
 no_image = True
-center = None
 angle = 0
+angle_shape = 0
 radius = 0
+landmarks = None
 
 def main():
     global args
@@ -55,6 +60,7 @@ def main():
     # Create UI
     cv2.namedWindow('image')
     cv2.createTrackbar('Angle', 'image', 0, 180, set_angle)
+    cv2.createTrackbar('Shape Angle', 'image', 0, 180, set_angle_shape)
     cv2.createTrackbar('Radius', 'image', 0, 400, set_radius)
     cv2.setTrackbarPos('Radius', 'image', 200)
 
@@ -78,7 +84,6 @@ def main():
             if i < 0:
                 i = len(images) - 1
         elif k == ord('q'):
-            logging.info("Exit by user")
             break
 
     cv2.destroyAllWindows()
@@ -90,13 +95,17 @@ def set_angle(x):
     angle = x
     draw_angle()
 
+def set_angle_shape(x):
+    global angle_shape
+    draw_angle_shape(x)
+
 def set_radius(x):
     global radius
     radius = x
     draw_angle()
 
 def process_image(args, path):
-    global center, img, no_image
+    global img, img_src, no_image, landmarks
 
     no_image = False
 
@@ -112,21 +121,15 @@ def process_image(args, path):
     if args.maxdim and max_px > args.maxdim:
         rf = float(args.maxdim) / max_px
         img = cv2.resize(img, None, fx=rf, fy=rf)
+    img_src = img.copy()
 
     # Perform segmentation
     mask = ft.segment(img, args.iters, args.margin)
     bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
 
     # Get landmarks
-    contour, center, defects, start = ft.shape360(img, bin_mask)
-
-    # Draw landmarks
-    for d, point in defects:
-        if d < 10:
-            break
-        cv2.circle(img, point, 5, BLUE, -1)
-    cv2.circle(img, center, 5, GREEN, -1)
-    cv2.circle(img, start, 5, CYAN, -1)
+    landmarks = ft.shape360(img, bin_mask)
+    contour, center, defects, start = landmarks
 
     # Fit an ellipse (and draw it)
     if len(contour) >= 6:
@@ -134,31 +137,87 @@ def process_image(args, path):
         #cv2.ellipse(img, box, GREEN)
         angle = box[2]
 
-        #set_angle(angle)
+        # This indirectly calls set_angle(angle)
         cv2.setTrackbarPos('Angle', 'image', int(angle))
 
     draw_angle()
 
 def draw_angle():
-    global angle, center, img, no_image, radius
+    global angle, img, no_image, radius, landmarks
 
     if no_image:
         img = np.zeros((500, 500, 3), np.uint8)
         center = (250,250)
+    else:
+        img = img_src.copy()
+
+        # Draw landmarks
+        contour, center, defects, start = landmarks
+
+        for d, point in defects:
+            if d < 10:
+                break
+            cv2.circle(img, point, 5, BLUE, -1)
+        cv2.circle(img, center, 5, GREEN, -1)
+        cv2.circle(img, start, 5, CYAN, -1)
 
     # Draw x and y axis
-    cv2.line(img, (0, center[1]), (img.shape[1], center[1]), GREEN)
-    cv2.line(img, (center[0], 0), (center[0], img.shape[0]), GREEN)
+    cv2.line(img, (0, center[1]), (img.shape[1], center[1]), BLACK)
+    cv2.line(img, (center[0], 0), (center[0], img.shape[0]), BLACK)
 
     # Draw the angle.
     angle_line = ft.angled_line(center, angle, radius)
-    if angle < 0:
+    if angle > 90:
         color = BLUE
     else:
         color = RED
     cv2.line(img, angle_line[0], angle_line[1], color)
 
     cv2.imshow('image', img)
+
+def draw_angle_shape(angle):
+    global img, radius, landmarks
+
+    draw_angle()
+    contour, center, defects, start = landmarks
+
+    # Draw the angle.
+    angle_line = ft.angled_line(center, angle, radius)
+    cv2.line(img, angle_line[0], angle_line[1], GREEN)
+
+    # Get the slope.
+    a = ft.slope_from_angle(angle, inverse=True)
+    #logging.info("f(x) = %fx" % (a))
+
+    # Draw the points intersecting with the contour.
+    max_dist = 10
+    points = []
+    for point in contour:
+        p = np.array(point[0])
+        p_norm = p - center
+        if abs(a) == float("inf") and p_norm[0] == 0:
+            points.append((0.0,tuple(p)))
+        else:
+            y = a * p_norm[0]
+            d = ft.point_dist(p_norm, (p_norm[0],y))
+            if d < 50:
+                points.append((d,tuple(p)))
+
+    points = sorted(points)
+    for d,p in extreme_points(points):
+        cv2.circle(img, tuple(p), 10, RED)
+
+    cv2.imshow('image', img)
+
+def extreme_points(points):
+    maxd = 0
+    extremes = None
+    for p1, p2 in itertools.combinations(points, 2):
+        d = ft.point_dist(p1[0], p2[0])
+        if d > maxd:
+            maxd = d
+            extremes = (p1,p2)
+    return extremes
 
 def get_image_files(path):
     fl = []

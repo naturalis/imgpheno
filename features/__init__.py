@@ -263,9 +263,19 @@ def shape360(src, img, defect_thresh=10):
                 dmin = dist
                 start = point
 
+    # Get distance from center to contour every degree.
+
+    ## TODO: Get the starting angle.
+
+    ## Get the function description for this angle.
+    #radians = math.radians(0)
+    #a = (math.cos(radians) / math.sin(radians)) * -1
+    #a2 = 1 / math.tan(radians) * -1
+    #logging.info("a = %f | %f" % (a, a2))
+
     return (contour, center, major_defects, start)
 
-def angled_line(center, angle, radius, horizontal=False):
+def angled_line(center, angle, radius):
     """Returns an angled line.
 
     The `angle` must be in degrees. The line's center is set at `center` and
@@ -283,11 +293,7 @@ def angled_line(center, angle, radius, horizontal=False):
 
     x = int(math.sin(angle) * radius)
     y = int(math.cos(angle) * radius)
-
-    if horizontal:
-        end = np.array((y, x))
-    else:
-        end = np.array((x, y))
+    end = np.array((x, y))
 
     return (tuple(center - end), tuple(center + end))
 
@@ -325,5 +331,33 @@ def side_of_line(l, p):
     """
     a,b = l
     return ((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]))
+
+def slope_from_angle(angle, inverse=False):
+    """Returns the function slope for a given angle in degrees.
+
+    Returns ``float("inf")`` if the resulting function is a vertical line.
+    """
+    if angle % 180 == 0:
+        a = float("inf")
+    else:
+        a = 1 / math.tan( math.radians(angle) )
+    if inverse:
+        a *= -1
+    return a
+
+def shortest_distance_to_contour_point(point, contour):
+    """Returns the point from `contour` that is closest to `point`.
+
+    Result is returned as a tuple (point, distance).
+    """
+    mind = float("inf")
+    minp = None
+    for p in contour:
+        p = p[0]
+        d = point_dist(point, p)
+        if d < mind:
+            mind = d
+            minp = p
+    return (minp, mind)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

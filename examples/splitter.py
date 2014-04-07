@@ -38,10 +38,10 @@ def split_image(path, args):
 
     sys.stderr.write("Processing %s...\n" % path)
 
-    # Resize the image if it is larger then the threshold.
+    # Resize the image if it is larger than the threshold.
     max_px = max(img.shape[:2])
     if args.maxdim and max_px > args.maxdim:
-        rf = args.maxdim / max_px
+        rf = float(args.maxdim) / max_px
         img = cv2.resize(img, None, fx=rf, fy=rf)
 
     # Perform segmentation.
