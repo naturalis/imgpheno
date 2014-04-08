@@ -337,7 +337,7 @@ def side_of_line(l, p):
 def slope_from_angle(angle, inverse=False):
     """Returns the function slope for a given angle in degrees.
 
-    Returns ``float("inf")`` if the resulting function is a vertical line.
+    Returns ``float("inf")`` if the slope is vertical.
     """
     if angle % 180 == 0:
         a = float("inf")
@@ -361,5 +361,27 @@ def shortest_distance_to_contour_point(point, contour):
             mind = d
             minp = p
     return (minp, mind)
+
+def deskew(img, dsize, mask=None):
+    """Moment-based image deskew.
+
+    Returns deskewed copy of source image `img`. If binary mask `mask` is
+    provided, the skew is derived from the mask, otherwise the source image
+    `img` is used, which in that case must be single-channel, 8-bit or a
+    floating-point 2D array. Size of output image is set with (x,y) tuple
+    `dsize`.
+
+    Source: OpenCV examples
+    """
+    if mask != None:
+        m = cv2.moments(mask, binaryImage=True)
+    else:
+        m = cv2.moments(img)
+    if abs(m['mu02']) < 1e-2:
+        return img.copy()
+    skew = m['mu11']/m['mu02']
+    affine_matrix = np.float32([[1, skew, -0.5*dsize[0]*skew], [0, 1, 0]])
+    img = cv2.warpAffine(img, affine_matrix, dsize, flags=cv2.WARP_INVERSE_MAP | cv2.INTER_LINEAR)
+    return img
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
