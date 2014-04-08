@@ -302,6 +302,8 @@ def point_dist(p1, p2):
 
     Each point is a ``(x,y)`` tuple.
     """
+    if not (len(p1) == 2 and len(p2) == 2):
+        raise ValueError("Points must be tuples or equivalent")
     dx = abs(p1[0] - p2[0])
     dy = abs(p1[1] - p2[1])
     return math.hypot(dx, dy)

@@ -213,7 +213,7 @@ def extreme_points(points):
     maxd = 0
     extremes = None
     for p1, p2 in itertools.combinations(points, 2):
-        d = ft.point_dist(p1[0], p2[0])
+        d = ft.point_dist(p1[1], p2[1])
         if d > maxd:
             maxd = d
             extremes = (p1,p2)
