@@ -17,6 +17,7 @@ import numpy as np
 
 import features as ft
 
+INTERSECT_DIST_MAX = 30
 BLACK = (0,0,0)
 GRAY = (105,105,105)
 BLUE = (255,0,0)
@@ -59,7 +60,7 @@ def main():
 
     # Create UI
     cv2.namedWindow('image')
-    cv2.createTrackbar('Angle', 'image', 0, 180, set_angle)
+    cv2.createTrackbar('Symmetry Angle', 'image', 0, 180, set_angle_symmetry)
     cv2.createTrackbar('Shape Angle', 'image', 0, 180, set_angle_shape)
     cv2.createTrackbar('Radius', 'image', 0, 400, set_radius)
     cv2.setTrackbarPos('Radius', 'image', 200)
@@ -71,7 +72,7 @@ def main():
             process_image(args, images[i])
         else:
             # Otherwise just draw the angle on a black background.
-            draw_angle()
+            draw_axis()
 
         k = cv2.waitKey(0) & 0xFF
 
@@ -90,10 +91,10 @@ def main():
 
     return 0
 
-def set_angle(x):
+def set_angle_symmetry(x):
     global angle
     angle = x
-    draw_angle()
+    draw_axis()
 
 def set_angle_shape(x):
     global angle_shape
@@ -102,7 +103,7 @@ def set_angle_shape(x):
 def set_radius(x):
     global radius
     radius = x
-    draw_angle()
+    draw_axis()
 
 def process_image(args, path):
     global img, img_src, no_image, landmarks
@@ -137,12 +138,13 @@ def process_image(args, path):
         #cv2.ellipse(img, box, GREEN)
         angle = box[2]
 
-        # This indirectly calls set_angle(angle)
-        cv2.setTrackbarPos('Angle', 'image', int(angle))
+        # This indirectly calls set_angle_symmetry(angle)
+        cv2.setTrackbarPos('Symmetry Angle', 'image', int(angle))
 
-    draw_angle()
+    draw_axis()
 
-def draw_angle():
+def draw_axis():
+    """Draw horizontal, vertical, and symmetry axis."""
     global angle, img, no_image, radius, landmarks
 
     if no_image:
@@ -178,34 +180,58 @@ def draw_angle():
 def draw_angle_shape(angle):
     global img, radius, landmarks
 
-    draw_angle()
+    draw_axis()
     contour, center, defects, start = landmarks
 
     # Draw the angle.
     angle_line = ft.angled_line(center, angle, radius)
     cv2.line(img, angle_line[0], angle_line[1], GREEN)
 
-    # Get the slope.
+    # Get the slope for the linear function.
     a = ft.slope_from_angle(angle, inverse=True)
-    #logging.info("f(x) = %fx" % (a))
+    logging.info("Slope for angle %d is %f" % (angle, a))
 
-    # Draw the points intersecting with the contour.
-    max_dist = 10
-    points = []
-    for point in contour:
-        p = np.array(point[0])
+    # Find all contour points that somewhat fit the linear function.
+    dist_points = []
+    for p in contour:
+        p = np.array(p[0])
         p_norm = p - center
         if abs(a) == float("inf") and p_norm[0] == 0:
-            points.append((0.0,tuple(p)))
+            dist_points.append((0.0,tuple(p)))
         else:
             y = a * p_norm[0]
             d = ft.point_dist(p_norm, (p_norm[0],y))
-            if d < 50:
-                points.append((d,tuple(p)))
+            if d <= INTERSECT_DIST_MAX:
+                dist_points.append((d,tuple(p)))
 
-    points = sorted(points)
-    for d,p in extreme_points(points):
-        cv2.circle(img, tuple(p), 10, RED)
+    #dist_points = sorted(dist_points)
+    distances, points = zip(*dist_points)
+    distances = np.array(distances)
+
+    # Filter for points which best fit the linear function. Stop until at least
+    # two points where found.
+    for max_dist in range(INTERSECT_DIST_MAX):
+        point_indexes = np.where(distances <= max_dist)
+        n_points = len(point_indexes[0])
+        if n_points >= 2:
+            break
+
+    points2 = [points[i] for i in point_indexes[0]]
+    points2 = np.array(points2, dtype=np.float32)
+
+    # Cluster the points if more than 2 points are found.
+    if n_points > 2:
+        k = int(0.5 * n_points)
+        if k < 2: k = 2
+        logging.info("Found %d intersections with contour; reducing to %d points" % (n_points, k))
+
+        term_crit = (cv2.TERM_CRITERIA_EPS, 30, 0.1)
+        ret, labels, centers = cv2.kmeans(points2, k, term_crit, 10, cv2.KMEANS_RANDOM_CENTERS)
+        points2 = centers
+
+    # Draw main intersections.
+    for x,y in points2:
+        cv2.circle(img, (x,y), 5, RED)
 
     cv2.imshow('image', img)
 
