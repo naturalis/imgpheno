@@ -188,49 +188,47 @@ def draw_angle_shape(angle):
     cv2.line(img, angle_line[0], angle_line[1], GREEN)
 
     # Get the slope for the linear function.
-    a = ft.slope_from_angle(angle, inverse=True)
-    logging.info("Slope for angle %d is %f" % (angle, a))
+    slope = ft.slope_from_angle(angle, inverse=True)
+    logging.info("Slope for angle %d is %f" % (angle, slope))
 
     # Find all contour points that somewhat fit the linear function.
     dist_points = []
     for p in contour:
         p = np.array(p[0])
         p_norm = p - center
-        if abs(a) == float("inf") and p_norm[0] == 0:
-            dist_points.append((0.0,tuple(p)))
+        if abs(slope) == float("inf"):
+            if p_norm[0] == 0:
+                dist_points.append((0.0, tuple(p)))
         else:
-            y = a * p_norm[0]
-            d = ft.point_dist(p_norm, (p_norm[0],y))
-            if d <= INTERSECT_DIST_MAX:
-                dist_points.append((d,tuple(p)))
+            # Only save points for which the distance to the expected point
+            # is less than or equal to the threshold.
+            y = slope * p_norm[0]
+            p_exp = (p_norm[0], y)
+            d = ft.point_dist(p_norm, p_exp)
+            threshold = math.ceil(abs(slope))
+            if d <= threshold:
+                dist_points.append((d, tuple(p)))
 
-    #dist_points = sorted(dist_points)
+    assert len(dist_points) != 0, "No intersections found"
+
     distances, points = zip(*dist_points)
-    distances = np.array(distances)
-
-    # Filter for points which best fit the linear function. Stop until at least
-    # two points where found.
-    for max_dist in range(INTERSECT_DIST_MAX):
-        point_indexes = np.where(distances <= max_dist)
-        n_points = len(point_indexes[0])
-        if n_points >= 2:
-            break
-
-    points2 = [points[i] for i in point_indexes[0]]
-    points2 = np.array(points2, dtype=np.float32)
+    points = np.array(points, dtype=np.float32)
 
     # Cluster the points if more than 2 points are found.
+    '''
+    n_points = len(points)
     if n_points > 2:
-        k = int(0.5 * n_points)
+        k = int(math.sqrt(n_points/2))
         if k < 2: k = 2
         logging.info("Found %d intersections with contour; reducing to %d points" % (n_points, k))
 
         term_crit = (cv2.TERM_CRITERIA_EPS, 30, 0.1)
-        ret, labels, centers = cv2.kmeans(points2, k, term_crit, 10, cv2.KMEANS_RANDOM_CENTERS)
-        points2 = centers
+        ret, labels, centers = cv2.kmeans(points, k, term_crit, 10, cv2.KMEANS_RANDOM_CENTERS)
+        points = centers
+    '''
 
     # Draw main intersections.
-    for x,y in points2:
+    for x,y in points:
         cv2.circle(img, (x,y), 5, RED)
 
     cv2.imshow('image', img)
