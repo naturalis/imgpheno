@@ -28,7 +28,7 @@ RED = (0,0,255)
 img_src = None
 img = None
 no_image = True
-angle = 0
+angle_sym = 0
 angle_shape = 0
 radius = 0
 landmarks = None
@@ -92,8 +92,8 @@ def main():
     return 0
 
 def set_angle_symmetry(x):
-    global angle
-    angle = x
+    global angle_sym
+    angle_sym = x
     draw_axis()
 
 def set_angle_shape(x):
@@ -136,16 +136,16 @@ def process_image(args, path):
     if len(contour) >= 6:
         box = cv2.fitEllipse(contour)
         #cv2.ellipse(img, box, GREEN)
-        angle = box[2]
+        angle_sym = box[2]
 
-        # This indirectly calls set_angle_symmetry(angle)
-        cv2.setTrackbarPos('Symmetry Angle', 'image', int(angle))
+        # This indirectly calls set_angle_symmetry(angle_sym)
+        cv2.setTrackbarPos('Symmetry Angle', 'image', int(angle_sym))
 
     draw_axis()
 
 def draw_axis():
     """Draw horizontal, vertical, and symmetry axis."""
-    global angle, img, no_image, radius, landmarks
+    global angle_sym, img, no_image, radius, landmarks
 
     if no_image:
         img = np.zeros((500, 500, 3), np.uint8)
@@ -167,9 +167,9 @@ def draw_axis():
     cv2.line(img, (0, center[1]), (img.shape[1], center[1]), BLACK)
     cv2.line(img, (center[0], 0), (center[0], img.shape[0]), BLACK)
 
-    # Draw the angle.
-    angle_line = ft.angled_line(center, angle, radius)
-    if angle > 90:
+    # Draw the symmetry angle.
+    angle_line = ft.angled_line(center, angle_sym, radius)
+    if angle_sym > 90:
         color = BLUE
     else:
         color = RED
@@ -178,10 +178,13 @@ def draw_axis():
     cv2.imshow('image', img)
 
 def draw_angle_shape(angle):
-    global img, radius, landmarks
+    global angle_sym, img, radius, landmarks
 
     draw_axis()
     contour, center, defects, start = landmarks
+
+    # Shift the angle by the object angle.
+    angle += angle_sym
 
     # Draw the angle.
     angle_line = ft.angled_line(center, angle, radius)
@@ -215,7 +218,15 @@ def draw_angle_shape(angle):
     points = np.array(points, dtype=np.float32)
 
     # Cluster the points if more than 2 points are found.
-    '''
+    #points = custer_points(points)
+
+    # Draw main intersections.
+    for x,y in points:
+        cv2.circle(img, (x,y), 5, RED)
+
+    cv2.imshow('image', img)
+
+def custer_points(points):
     n_points = len(points)
     if n_points > 2:
         k = int(math.sqrt(n_points/2))
@@ -224,14 +235,8 @@ def draw_angle_shape(angle):
 
         term_crit = (cv2.TERM_CRITERIA_EPS, 30, 0.1)
         ret, labels, centers = cv2.kmeans(points, k, term_crit, 10, cv2.KMEANS_RANDOM_CENTERS)
-        points = centers
-    '''
-
-    # Draw main intersections.
-    for x,y in points:
-        cv2.circle(img, (x,y), 5, RED)
-
-    cv2.imshow('image', img)
+        return centers
+    return points
 
 def extreme_points(points):
     maxd = 0
