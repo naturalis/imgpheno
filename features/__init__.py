@@ -5,6 +5,7 @@
 
 import collections
 import itertools
+import logging
 import math
 
 import numpy as np
@@ -213,68 +214,65 @@ def simple_outline(img, resolution=10):
 
     return np.array(outline)
 
-def shape360(src, img, defect_thresh=10):
+def shape360(contour, step=1, t=8):
     """Returns a shape feature from a binary image.
 
     Shape is returned as an array of 360 values. The returned shape is
     rotation invariant up to an angle of 90 degrees.
     """
-    if len(img.shape) != 2:
-        raise ValueError("Input image must be binary")
-
-    # Obtain contours (all points) from the mask.
-    contour = get_largest_countour(img.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-
     if len(contour) < 6:
-        raise ValueError("Contour must have at least 6 points, %d found" % len(contour))
+        raise ValueError("Contour must have at least 6 points, found %d" % len(contour))
 
     # Get the center.
-    m = cv2.moments(img, binaryImage = True)
-    center = ( int(m['m10']/m['m00']) , int(m['m01']/m['m00']) )
+    center, radius = cv2.minEnclosingCircle(contour)
+    center = np.int32(center)
 
-    # Get convex hull and defects.
-    hull = cv2.convexHull(contour, returnPoints = False)
-    defects = cv2.convexityDefects(contour, hull)
-
-    # Get the defects and sort them decreasingly.
-    major_defects = []
-    for i in range(defects.shape[0]):
-        s,e,f,d = defects[i,0]
-        far = tuple(contour[f][0])
-        major_defects.append( (d/256.0, far) )
-    major_defects = sorted(major_defects, reverse=True)
-
-    # Fit an ellipse to get the contour angle.
+    # Fit an ellipse on the contour to get the angle of the symmetry axis.
     box = cv2.fitEllipse(contour)
-    angle = box[2]
+    rotation = box[2]
 
-    # Get a line for the angle.
-    line = angled_line(center, angle, max(img.shape))
+    # Get distances from center to contour intersections for every degree
+    # from the symmetry axis.
+    intersects = {}
+    for angle in range(0, 180, step):
+        logging.debug("shape360: Calculating intersections for angle %d..." % angle)
+        # Get the slope for the linear function of this angle and account for
+        # the rotation of the object.
+        slope = slope_from_angle(angle + rotation, inverse=True)
 
-    # Get the major defect closest to the center and left from the vertical
-    # axis. Use this point as the starting point.
-    start = None
-    dmin = None
-    for d, point in major_defects:
-        if d < defect_thresh:
-            break
-        if side_of_line(line, point) > 0:
-            dist = point_dist(point, center)
-            if dmin == None or dist < dmin:
-                dmin = dist
-                start = point
+        # Find al contour points that closely fit the angle's linear function.
+        # Only save points for which the distance to the expected point is
+        # less than or equal to the maximum gap. Save the points with a weight
+        # value, which is used for clustering.
+        weighted_points = []
+        for p in contour:
+            p = np.array(p[0])
+            x, y = p - center
+            if abs(slope) == float("inf"):
+                if x == 0:
+                    # Save points that are on the vertical axis.
+                    weighted_points.append((0.0, tuple(p)))
+            else:
+                y_exp = slope * x
+                d = point_dist((x,y), (x, y_exp))
 
-    # Get distance from center to contour every degree.
+                # Since pixel points can only be defined with natural numbers,
+                # resulting in gaps in between two points, means the maximum
+                # gap is equal to the slope of the linear function.
+                gap_max = math.ceil(abs(slope))
+                if d <= gap_max:
+                    w = 1 / (d+1)
+                    weighted_points.append( (w, tuple(p)) )
 
-    ## TODO: Get the starting angle.
+        assert len(weighted_points) != 0, "No intersections found"
 
-    ## Get the function description for this angle.
-    #radians = math.radians(0)
-    #a = (math.cos(radians) / math.sin(radians)) * -1
-    #a2 = 1 / math.tan(radians) * -1
-    #logging.info("a = %f | %f" % (a, a2))
+        # Cluster the points.
+        weighted_points = weighted_points_nearest(weighted_points, t)
+        _, points = zip(*weighted_points)
 
-    return (contour, center, major_defects, start)
+        intersects[angle] = points
+
+    return (intersects, center, rotation)
 
 def angled_line(center, angle, radius):
     """Returns an angled line.
@@ -363,6 +361,12 @@ def shortest_distance_to_contour_point(point, contour):
             minp = p
     return (minp, mind)
 
+def moments_get_center(m):
+    return np.array( (int(m['m10']/m['m00']), int(m['m01']/m['m00'])) )
+
+def moments_get_skew(m):
+    return m['mu11']/m['mu02']
+
 def deskew(img, dsize, mask=None):
     """Moment-based image deskew.
 
@@ -380,7 +384,7 @@ def deskew(img, dsize, mask=None):
         m = cv2.moments(img)
     if abs(m['mu02']) < 1e-2:
         return img.copy()
-    skew = m['mu11']/m['mu02']
+    skew = moments_get_skew(m)
     affine_matrix = np.float32([[1, skew, -0.5*dsize[0]*skew], [0, 1, 0]])
     img = cv2.warpAffine(img, affine_matrix, dsize, flags=cv2.WARP_INVERSE_MAP | cv2.INTER_LINEAR)
     return img
@@ -418,5 +422,20 @@ def weighted_points_nearest(points, t=5):
                 points.remove(p2)
                 dels.append(p2)
     return points
+
+def get_major_defects(contour):
+    """Returns the convexity defects of a contour sorted by severity."""
+    # Get convex hull and defects.
+    hull = cv2.convexHull(contour, returnPoints = False)
+    defects = cv2.convexityDefects(contour, hull)
+
+    # Get the defects and sort them decreasingly.
+    major_defects = []
+    for i in range(defects.shape[0]):
+        s,e,f,d = defects[i,0]
+        distance = d/256.0
+        farthest_point = tuple(contour[f][0])
+        major_defects.append( (distance, farthest_point) )
+    return sorted(major_defects, reverse=True)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
