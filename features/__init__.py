@@ -4,6 +4,7 @@
 """Module for feature extraction from digital images."""
 
 import collections
+import itertools
 import math
 
 import numpy as np
@@ -383,5 +384,39 @@ def deskew(img, dsize, mask=None):
     affine_matrix = np.float32([[1, skew, -0.5*dsize[0]*skew], [0, 1, 0]])
     img = cv2.warpAffine(img, affine_matrix, dsize, flags=cv2.WARP_INVERSE_MAP | cv2.INTER_LINEAR)
     return img
+
+def extreme_points(points):
+    """Returns the two most extreme points from a point set."""
+    maxd = 0
+    extremes = None
+    for p1, p2 in itertools.combinations(points, 2):
+        d = ft.point_dist(p1[1], p2[1])
+        if d > maxd:
+            maxd = d
+            extremes = (p1,p2)
+    return extremes
+
+def weighted_points_nearest(points, t=5):
+    """Cluster weighted points.
+
+    Each sample in `points` is a tuple of the format (weight, (x,y)).
+
+    For each point combination for which the point distance is no more than
+    `t` are reduced to a single point, keeping the point with the highest
+    weight value.
+    """
+    dels = []
+    for p1, p2 in itertools.combinations(points, 2):
+        if p1 in dels or p2 in dels:
+            continue
+        d = point_dist(p1[1], p2[1])
+        if d <= t:
+            if p2[0] > p1[0]:
+                points.remove(p1)
+                dels.append(p1)
+            else:
+                points.remove(p2)
+                dels.append(p2)
+    return points
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

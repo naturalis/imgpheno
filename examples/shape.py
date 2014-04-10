@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import itertools
 import logging
 import math
 import mimetypes
@@ -195,58 +194,39 @@ def draw_angle_shape(angle):
     logging.info("Slope for angle %d is %f" % (angle, slope))
 
     # Find all contour points that somewhat fit the linear function.
-    dist_points = []
+    weighted_points = []
     for p in contour:
         p = np.array(p[0])
         p_norm = p - center
         if abs(slope) == float("inf"):
             if p_norm[0] == 0:
-                dist_points.append((0.0, tuple(p)))
+                weighted_points.append((0.0, tuple(p)))
         else:
             # Only save points for which the distance to the expected point
-            # is less than or equal to the threshold.
+            # is less than or equal to the threshold. Save the points with
+            # a weight value.
             y = slope * p_norm[0]
             p_exp = (p_norm[0], y)
             d = ft.point_dist(p_norm, p_exp)
+
+            # The threshold depends on the slope of the linear function.
             threshold = math.ceil(abs(slope))
             if d <= threshold:
-                dist_points.append((d, tuple(p)))
+                w = 1 / (d+1)
+                weighted_points.append((w, tuple(p)))
 
-    assert len(dist_points) != 0, "No intersections found"
+    assert len(weighted_points) != 0, "No intersections found"
 
-    distances, points = zip(*dist_points)
+    # Cluster the points.
+    weighted_points = ft.weighted_points_nearest(weighted_points, t=8)
+    weights, points = zip(*weighted_points)
     points = np.array(points, dtype=np.float32)
-
-    # Cluster the points if more than 2 points are found.
-    #points = custer_points(points)
 
     # Draw main intersections.
     for x,y in points:
         cv2.circle(img, (x,y), 5, RED)
 
     cv2.imshow('image', img)
-
-def custer_points(points):
-    n_points = len(points)
-    if n_points > 2:
-        k = int(math.sqrt(n_points/2))
-        if k < 2: k = 2
-        logging.info("Found %d intersections with contour; reducing to %d points" % (n_points, k))
-
-        term_crit = (cv2.TERM_CRITERIA_EPS, 30, 0.1)
-        ret, labels, centers = cv2.kmeans(points, k, term_crit, 10, cv2.KMEANS_RANDOM_CENTERS)
-        return centers
-    return points
-
-def extreme_points(points):
-    maxd = 0
-    extremes = None
-    for p1, p2 in itertools.combinations(points, 2):
-        d = ft.point_dist(p1[1], p2[1])
-        if d > maxd:
-            maxd = d
-            extremes = (p1,p2)
-    return extremes
 
 def get_image_files(path):
     fl = []
