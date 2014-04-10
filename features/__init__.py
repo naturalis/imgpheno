@@ -215,16 +215,20 @@ def simple_outline(img, resolution=10):
     return np.array(outline)
 
 def shape360(contour, step=1, t=8):
-    """Returns a shape feature from a binary image.
+    """Returns a shape feature from a contour.
 
-    Shape is returned as an array of 360 values. The returned shape is
-    rotation invariant up to an angle of 90 degrees.
+    Shape is returned as a tuple ``(intersects, center, rotation)``, where
+    ``intersects`` is a dict with arrays of intersecting points for each
+    angle. ``center`` and ``rotation`` specify the center and rotation of the
+    contour, respectively. The step size for the angle can be set with `step`.
+    The `t` argument is passed to :meth:`weighted_points_nearest`. The
+    returned shape is rotation invariant up to an angle of ~90 degrees.
     """
     if len(contour) < 6:
         raise ValueError("Contour must have at least 6 points, found %d" % len(contour))
 
     # Get the center.
-    center, radius = cv2.minEnclosingCircle(contour)
+    center, _ = cv2.minEnclosingCircle(contour)
     center = np.int32(center)
 
     # Fit an ellipse on the contour to get the angle of the symmetry axis.
@@ -242,8 +246,8 @@ def shape360(contour, step=1, t=8):
 
         # Find al contour points that closely fit the angle's linear function.
         # Only save points for which the distance to the expected point is
-        # less than or equal to the maximum gap. Save the points with a weight
-        # value, which is used for clustering.
+        # no more than the maximum gap. Save each point with a weight value,
+        # which is used for clustering.
         weighted_points = []
         for p in contour:
             p = np.array(p[0])
@@ -254,7 +258,7 @@ def shape360(contour, step=1, t=8):
                     weighted_points.append((0.0, tuple(p)))
             else:
                 y_exp = slope * x
-                d = point_dist((x,y), (x, y_exp))
+                d = abs(y - y_exp)
 
                 # Since pixel points can only be defined with natural numbers,
                 # resulting in gaps in between two points, means the maximum
@@ -391,10 +395,22 @@ def deskew(img, dsize, mask=None):
 
 def extreme_points(points):
     """Returns the two most extreme points from a point set."""
+    if not isinstance(points, np.ndarray):
+        points = np.array(points)
+    if len(points.shape) == 2 and points.shape[1] == 2:
+        shape = 1
+    elif len(points.shape) == 3 and points.shape[1:2] == (1,2):
+        shape = 2
+    else:
+        raise ValueError("Unknown shape for point set")
+
     maxd = 0
     extremes = None
     for p1, p2 in itertools.combinations(points, 2):
-        d = ft.point_dist(p1[1], p2[1])
+        if shape == 2:
+            p1 = p1[1]
+            p2 = p2[1]
+        d = point_dist(p1, p2)
         if d > maxd:
             maxd = d
             extremes = (p1,p2)
