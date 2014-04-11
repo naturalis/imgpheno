@@ -152,11 +152,13 @@ def draw_angle_shape(angle):
 
     # Draw the angle.
     #line = ft.angled_line(center, angle + rotation, radius)
-    line = ft.extreme_points(intersects[angle])
+    line = ft.extreme_points(intersects[angle] + intersects[angle+180])
     cv2.line(img, tuple(line[0]), tuple(line[1]), GREEN)
 
     # Draw main intersections.
     for x,y in intersects[angle]:
+        cv2.circle(img, (x,y), 5, BLUE)
+    for x,y in intersects[angle+180]:
         cv2.circle(img, (x,y), 5, RED)
 
     cv2.imshow('image', img)

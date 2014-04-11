@@ -218,11 +218,11 @@ def shape360(contour, step=1, t=8):
     """Returns a shape feature from a contour.
 
     Shape is returned as a tuple ``(intersects, center, rotation)``, where
-    ``intersects`` is a dict with arrays of intersecting points for each
-    angle. ``center`` and ``rotation`` specify the center and rotation of the
-    contour, respectively. The step size for the angle can be set with `step`.
-    The `t` argument is passed to :meth:`weighted_points_nearest`. The
-    returned shape is rotation invariant up to an angle of ~90 degrees.
+    ``intersects`` is a dict where the keys are angles and the values are lists
+    of intersecting points; ``center`` and ``rotation`` specify the center and
+    rotation of the contour, respectively. The step size for the angle can be
+    set with `step`. The `t` argument is passed to :meth:`weighted_points_nearest`.
+    The returned shape is rotation invariant up to a small rotation (< 90).
     """
     if len(contour) < 6:
         raise ValueError("Contour must have at least 6 points, found %d" % len(contour))
@@ -239,7 +239,6 @@ def shape360(contour, step=1, t=8):
     # from the symmetry axis.
     intersects = {}
     for angle in range(0, 180, step):
-        logging.debug("shape360: Calculating intersections for angle %d..." % angle)
         # Get the slope for the linear function of this angle and account for
         # the rotation of the object.
         slope = slope_from_angle(angle + rotation, inverse=True)
@@ -274,7 +273,27 @@ def shape360(contour, step=1, t=8):
         weighted_points = weighted_points_nearest(weighted_points, t)
         _, points = zip(*weighted_points)
 
-        intersects[angle] = points
+        # Figure out on which side of the symmetry the points lie.
+        # Create a line that separates points on the left from points on
+        # the right.
+        if (angle + rotation) != 0:
+            division_line = angled_line(center, angle + rotation + 90, 100)
+        else:
+            # Points cannot be separated when the division line is horizontal.
+            # So make a division line that is rotated 45 degrees to the left
+            # instead, so that the points are properly separated.
+            division_line = angled_line(center, angle + rotation - 45, 100)
+
+        intersects[angle] = []
+        intersects[angle+180] = []
+        for p in points:
+            side = side_of_line(division_line, p)
+            if side > 0:
+                intersects[angle].append(p)
+            elif side < 0:
+                intersects[angle+180].append(p)
+            else:
+                assert side != 0, "A point cannot be on the division line"
 
     return (intersects, center, rotation)
 
@@ -310,17 +329,6 @@ def point_dist(p1, p2):
     dx = abs(p1[0] - p2[0])
     dy = abs(p1[1] - p2[1])
     return math.hypot(dx, dy)
-
-def get_orientation(img):
-    """Returns the orientation from a binary image.
-
-    The orientation is returned in degrees.
-
-    Source: http://stackoverflow.com/a/14720823/466781
-    """
-    m = cv2.moments(img, binaryImage = True)
-    theta = 0.5 * math.atan( (2 * m['mu11']) / (m['mu20'] - m['mu02']) )
-    return math.degrees(theta)
 
 def side_of_line(l, p):
     """Returns on which side of line `l` point `p` lies.
@@ -366,10 +374,20 @@ def shortest_distance_to_contour_point(point, contour):
     return (minp, mind)
 
 def moments_get_center(m):
+    """Returns the center from moments."""
     return np.array( (int(m['m10']/m['m00']), int(m['m01']/m['m00'])) )
 
 def moments_get_skew(m):
+    """Returns the skew from moments."""
     return m['mu11']/m['mu02']
+
+def moments_get_orientation(m):
+    """Returns the orientation in degrees from moments.
+
+    Source: http://stackoverflow.com/a/14720823/466781
+    """
+    theta = 0.5 * math.atan( (2 * m['mu11']) / (m['mu20'] - m['mu02']) )
+    return math.degrees(theta)
 
 def deskew(img, dsize, mask=None):
     """Moment-based image deskew.
