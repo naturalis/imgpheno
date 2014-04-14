@@ -1,6 +1,6 @@
 ---
 io:
-    image_path: data/train/                 # Top directory for image files. Images must be in level one sub directories.
+    image_path: images/train/               # Top directory for image files. Images must be in level one sub directories.
     train_data: data/orchids_train.tsv      # Output file for training data.
 
 preprocess:
@@ -9,8 +9,9 @@ preprocess:
     segmentation:
         iterations: 5                   # The number of segmentation iterations. Default is 5.
         margin: 1                       # The margin of the region of interest from the edges of the image. Default is 1.
-        output_folder: data/masked/     # Where masked images are saved (optional).
+        output_folder: images/masked/   # Where masked images are saved (optional).
 
 features:
     color_histograms: {BGR: 10, HSV: 10}
-    shape360: {step: 1, t: 8}
+    #shape_outline: {resolution: 15}
+    shape_360: {step: 1, t: 8}

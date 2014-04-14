@@ -145,7 +145,7 @@ def get_largest_countour(img, mode, method):
             largest = contour
     return largest
 
-def simple_outline(img, resolution=10):
+def shape_outline(img, resolution=10):
     """Returns an outline feature from a binary image.
 
     Returns a single array where the first `resolution` elements represent
@@ -214,7 +214,7 @@ def simple_outline(img, resolution=10):
 
     return np.array(outline)
 
-def shape360(contour, step=1, t=8):
+def shape_360(contour, step=1, t=8):
     """Returns a shape feature from a contour.
 
     Shape is returned as a tuple ``(intersects, center, rotation)``, where

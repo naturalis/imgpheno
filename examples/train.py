@@ -118,14 +118,14 @@ def train_data(args):
     # Get list of image files and set the classes.
     images = {}
     classes = []
-    for item in os.listdir(yml.image_path):
-        path = os.path.join(yml.image_path, item)
+    for item in os.listdir(yml.io.image_path):
+        path = os.path.join(yml.io.image_path, item)
         if os.path.isdir(path):
             classes.append(item)
             images[item] = get_image_files(path)
 
     # Make codeword for each class.
-    codewords = get_codewords(classes, *NORM_RANGE)
+    codewords = get_codewords(classes, -1, 1)
 
     # Construct the header row.
     header_primer = ["ID"]
@@ -138,8 +138,13 @@ def train_data(args):
                 for i in range(n):
                     header_data.append("%s.%d" % (colorspace[ch], i+1))
 
-    if 'shape360' in yml.features:
-        n = 360 / getattr(yml.features.shape360, 'step', 1)
+    if 'shape_outline' in yml.features:
+        n = 2 * getattr(yml.features.shape_outline, 'resolution', 15)
+        for i in range(n):
+            header_data.append("OL.%d" % (i+1,))
+
+    if 'shape_360' in yml.features:
+        n = 360 / getattr(yml.features.shape_360, 'step', 1)
         for i in range(n):
             header_data.append("SHAPE.%d" % i)
 
@@ -176,7 +181,7 @@ def train_data(args):
         out_file.write( "%s\n" % "\t".join(row) )
 
     out_file.close()
-    logging.info("Training data written to %s" % yml.output_file)
+    logging.info("Training data written to %s" % yml.io.train_data)
 
 def get_image_files(path):
     fl = []
@@ -393,9 +398,14 @@ class Fingerprint(object):
             data = self.get_color_histograms()
             data_row.extend(data)
 
-        if 'shape360' in self.params.features:
+        if 'shape_outline' in self.params.features:
+            logging.info("- Running shape:outline...")
+            data = self.get_shape_outline()
+            data_row.extend(data)
+
+        if 'shape_360' in self.params.features:
             logging.info("- Running shape:360...")
-            data = self.get_shape360()
+            data = self.get_shape_360()
             data_row.extend(data)
 
         return data_row
@@ -404,7 +414,7 @@ class Fingerprint(object):
         if self.bin_mask == None:
             raise ValueError("Binary mask not set")
 
-        row = []
+        histograms = []
         for colorspace, bins in vars(self.params.features.color_histograms).iteritems():
             bins = [int(bins)] * len(colorspace)
 
@@ -421,18 +431,28 @@ class Fingerprint(object):
 
             for hist in hists:
                 hist = cv2.normalize(hist, None, -1, 1, cv2.NORM_MINMAX)
-                row.extend( hist.ravel() )
-        return row
+                histograms.extend( hist.ravel() )
+        return histograms
 
-    def get_shape360(self):
+    def get_shape_outline(self):
         if self.bin_mask == None:
             raise ValueError("Binary mask not set")
 
-        step = getattr(self.params.features.shape360, 'step', 1)
-        t = getattr(self.params.features.shape360, 't', 8)
+        resolution = getattr(self.params.features.shape_outline, 'resolution', 15)
+
+        outline = ft.shape_outline(self.bin_mask, resolution)
+        outline = cv2.normalize(outline, None, -1, 1, cv2.NORM_MINMAX)
+        return outline
+
+    def get_shape_360(self):
+        if self.bin_mask == None:
+            raise ValueError("Binary mask not set")
+
+        step = getattr(self.params.features.shape_360, 'step', 1)
+        t = getattr(self.params.features.shape_360, 't', 8)
 
         contour = ft.get_largest_countour(self.bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        intersects, center, rotation = ft.shape360(contour, step, t)
+        intersects, center, rotation = ft.shape_360(contour, step, t)
 
         # For each angle save the minimum distance from center to contour.
         shape = []
