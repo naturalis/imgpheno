@@ -1,14 +1,15 @@
 ---
-image_path: data/train              # Top directory for image files. Images must be in level one sub directories.
-output_file: orchids_train.tsv      # Output file for training data.
+io:
+    image_path: data/train/                 # Top directory for image files. Images must be in level one sub directories.
+    train_data: data/orchids_train.tsv      # Output file for training data.
 
 preprocess:
-    maximum_dimension: 500          # Limit the maximum dimension for an input image. The input image is scaled down if width or height exceeds the value.
+    maximum_dimension: 500              # Limit the maximum dimension for an input image (optional). The input image is scaled down if width or height exceeds the value.
 
     segmentation:
-        iterations: 5               # The number of segmentation iterations.
-        margin: 1                   # The margin of the region of interest from the edges of the image.
-        output_folder: data/masked  # Where masked images are saved.
+        iterations: 5                   # The number of segmentation iterations. Default is 5.
+        margin: 1                       # The margin of the region of interest from the edges of the image. Default is 1.
+        output_folder: data/masked/     # Where masked images are saved (optional).
 
 features:
     color_histograms: {BGR: 10, HSV: 10}

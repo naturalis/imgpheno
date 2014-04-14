@@ -3,6 +3,5 @@
 *.swp
 Session.vim
 
-*.tsv
-examples/data/
+examples/data_/
 examples/tmp/
