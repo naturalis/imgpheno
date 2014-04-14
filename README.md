@@ -10,3 +10,7 @@ This Python module has the following dependencies:
 * python (2.7.x)
 * opencv (2.4.x)
 * python-opencv (2.4.x)
+
+For some of the example scripts you need additional dependencies:
+
+* python-yaml / PyYAML (>= 3.10)
