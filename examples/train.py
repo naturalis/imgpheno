@@ -4,6 +4,7 @@
 import argparse
 import collections
 import csv
+import logging
 import mimetypes
 import os
 import sys
@@ -14,32 +15,31 @@ sys.path.insert(0, os.path.abspath('.'))
 import cv2
 import numpy as np
 from pyfann import libfann
+import yaml
 
 import features as ft
 
-HIST_BINS = (10,10,10)
-OUTLINE_RES = 15
-NORM_RANGE = (-1, 1)
-
 def main():
+    if sys.flags.debug:
+        # Print debug messages if the -d flag is set for the Python interpreter.
+        logging.basicConfig(level=logging.DEBUG, format='%(levelname)s %(message)s')
+    else:
+        # Otherwise just show log messages of type INFO.
+        logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
+
     parser = argparse.ArgumentParser(description='Make training data')
 
     # Create a sub parser for sub-commands.
     subparsers = parser.add_subparsers(help='Specify which task to start.')
 
     # Create an argument parser for sub-command 'traindata'.
-    help_data = "Make training data"
+    help_data = """Create a tab separated file with training data. See the file
+    train_data.yml for an example YAML file for creating training data.
+    """
     parser_data = subparsers.add_parser('data',
         help=help_data,
         description=help_data)
-    parser_data.add_argument('path', metavar='PATH', help='Top directory for image files. Images must be in level one sub directories.')
-    parser_data.add_argument('-o', '--output', metavar='FILE', required=True, help='Path for training data file.')
-    parser_data.add_argument('-t', '--test', metavar='FILE', default=None, help='Path for test data file.')
-    parser_data.add_argument('--maxdim', metavar='N', type=float, default=None, help="Limit the maximum dimension for an input image. The input image is resized if width or height is larger than N. Default is no limit.")
-    parser_data.add_argument('--split', metavar='N', type=int, default=None, help="Split into training and test data, where each Nth row is test data. Use --test to set the output file for test data.")
-    parser_data.add_argument('--segment', metavar='PATH', help="Segment the image. Masked images are saved in PATH.")
-    parser_data.add_argument('--seg-iters', metavar='N', type=int, default=5, help="The number of segmentation iterations. Default is 5.")
-    parser_data.add_argument('--seg-margin', metavar='N', type=int, default=5, help="The margin of the foreground rectangle from the edges. Default is 5.")
+    parser_data.add_argument('path', metavar='FILE', help="Path to a YAML file with training data parameters.")
 
     # Create an argument parser for sub-command 'trainann'.
     help_ann = "Train artificial neural network"
@@ -58,7 +58,7 @@ def main():
     parser_ann.add_argument("-o", "--output", metavar="FILE", help="Name of the output file")
 
     # Create an argument parser for sub-command 'test-ann'.
-    help_test_ann = "Classify an image"
+    help_test_ann = "Test an artificial neural network"
     parser_test_ann = subparsers.add_parser('test-ann',
         help=help_test_ann,
         description=help_test_ann)
@@ -93,27 +93,31 @@ def main():
     sys.exit()
 
 def train_data(args):
-    if not os.path.isdir(args.path):
-        sys.stderr.write("Cannot open %s (no such directory)\n" % args.path)
+    if not os.path.isfile(args.path):
+        sys.stderr.write("Cannot open %s (no such file)\n" % args.path)
         return
-    if args.segment and not os.path.isdir(args.segment):
-        sys.stderr.write("Cannot open %s (no such directory)\n" % args.segment)
-        return
-    if args.split and not args.test:
-        sys.stderr.write("Must specify --test when using --split\n")
-        return
-    if args.output:
-        out_file = open(args.output, 'w')
-    if args.test:
-        test_file = open(args.test, 'w')
 
-    n_data_cols = (sum(HIST_BINS) * 2) + (OUTLINE_RES * 2)
+    yml_file = open(args.path, 'r')
+    yml = yaml.load(yml_file)
+    yml = DictObject(yml)
+    yml_file.close()
 
-    # Get list of image files.
+    if not os.path.isdir(yml.image_path):
+        sys.stderr.write("Cannot open %s (no such directory)\n" % yml.image_path)
+        return
+    if 'preprocess' in yml and 'segmentation' in yml.preprocess.segmentation:
+        output_folder = getattr(yml.preprocess.segmentation, 'output_folder')
+        if not os.path.isdir(output_folder):
+            sys.stderr.write("Cannot open %s (no such directory)\n" % output_folder)
+            return
+
+    out_file = open(yml.output_file, 'w')
+
+    # Get list of image files and set the classes.
     images = {}
     classes = []
-    for item in os.listdir(args.path):
-        path = os.path.join(args.path, item)
+    for item in os.listdir(yml.image_path):
+        path = os.path.join(yml.image_path, item)
         if os.path.isdir(path):
             classes.append(item)
             images[item] = get_image_files(path)
@@ -121,57 +125,56 @@ def train_data(args):
     # Make codeword for each class.
     codewords = get_codewords(classes, *NORM_RANGE)
 
-    # Write header row.
-    header = ["ID"]
-    channel_strs = ("BGR", "HSV")
-    for channel_str in channel_strs:
-        for ch, n in enumerate(HIST_BINS):
-            for v in range(n):
-                header.append("%s.%d" % (channel_str[ch], v+1))
+    # Construct the header row.
+    header_primer = ["ID"]
+    header_data = []
+    header_out = []
 
-    for i in range(OUTLINE_RES*2):
-        header.append("OL.%d" % (i+1,))
+    if 'color_histograms' in yml.features:
+        for colorspace, bins in vars(yml.features.color_histograms).iteritems():
+            for ch, n in enumerate([bins] * len(colorspace)):
+                for i in range(n):
+                    header_data.append("%s.%d" % (colorspace[ch], i+1))
+
+    if 'shape360' in yml.features:
+        n = 360 / getattr(yml.features.shape360, 'step', 1)
+        for i in range(n):
+            header_data.append("SHAPE.%d" % i)
 
     for i in range(len(classes)):
-        header.append("OUT.%d" % (i+1,))
+        header_out.append("OUT.%d" % (i+1,))
 
-    out_file.write( "%s\n" % "\t".join(header) )
-    if args.test:
-        test_file.write( "%s\n" % "\t".join(header) )
+    # Write the header row.
+    out_file.write( "%s\n" % "\t".join(header_primer + header_data + header_out) )
 
     # Set the training data.
-    training_data = TrainData(n_data_cols, len(classes))
+    training_data = TrainData(len(header_data), len(classes))
+    fp = Fingerprint()
     for im_class, files in images.items():
         for im_path in files:
-            data = get_fingerprint( im_path, args, HIST_BINS )
-            if not data:
-                sys.stderr.write("Failed to read %s. Skipping.\n" % im_path)
+            if fp.open(im_path, yml) == None:
+                logging.info("Failed to read %s. Skipping." % im_path)
                 continue
-            training_data.append(data, codewords[im_class], im_path)
+
+            fp.preprocess()
+            data = fp.make()
+
+            assert len(data) == len(header_data), "Data length mismatch"
+
+            training_data.append(data, codewords[im_class], label=im_path)
+
     training_data.finalize()
 
-    if args.split:
-        training_data.split(args.split)
-
     # Write data rows.
-    for label, input_data, output_data, is_test in training_data:
+    for label, input_data, output_data in training_data:
         row = []
         row.append( label )
         row.extend( input_data.astype(str) )
         row.extend( output_data.astype(str) )
-        if is_test:
-            test_file.write( "%s\n" % "\t".join(row) )
-        else:
-            out_file.write( "%s\n" % "\t".join(row) )
+        out_file.write( "%s\n" % "\t".join(row) )
 
-    if args.output:
-        out_file.close()
-        sys.stderr.write("Training data written to %s\n" % args.output)
-    if args.test:
-        test_file.close()
-        sys.stderr.write("Test data written to %s\n" % args.test)
-
-    return 0
+    out_file.close()
+    logging.info("Training data written to %s" % yml.output_file)
 
 def get_image_files(path):
     fl = []
@@ -184,62 +187,6 @@ def get_image_files(path):
             if mime and mime.startswith('image'):
                 fl.append(im_path)
     return fl
-
-def get_fingerprint(path, args, bins = None):
-    img = cv2.imread(path)
-    bin_mask = None
-
-    if img == None or img.size == 0:
-        return None
-
-    sys.stderr.write("Processing %s...\n" % path)
-
-    # Resize the image if it is larger then the threshold.
-    max_px = max(img.shape[:2])
-    if args.maxdim and max_px > args.maxdim:
-        rf = args.maxdim / max_px
-        img = cv2.resize(img, None, fx=rf, fy=rf)
-
-    # Create copy in HSV color space.
-    img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-
-    # Perform segmentation.
-    if args.segment:
-        mask = ft.segment(img, args.seg_iters, args.seg_margin)
-
-        # Create a binary mask. Foreground is made white, background black.
-        bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
-
-        if isinstance(args.segment, str) and os.path.isdir(args.segment):
-            # Merge the binary mask with the image.
-            img_masked = cv2.bitwise_and(img, img, mask=bin_mask)
-
-            # Save the masked image to the output folder.
-            fname_base = os.path.basename(path)
-            fname_parts = os.path.splitext(fname_base)
-            fname = "%s.png" % (fname_parts[0])
-            out_path = os.path.join(args.segment, fname)
-            cv2.imwrite(out_path, img_masked)
-
-    # Extract features
-    hists = ft.hists(img, bins, bin_mask, ft.CS_BGR)
-    hists_hsv = ft.hists(img_hsv, bins, bin_mask, ft.CS_HSV)
-    outline = ft.simple_outline(bin_mask, OUTLINE_RES)
-
-    # Construct data row
-    row = []
-    for hist in hists:
-        hist = cv2.normalize(hist, None, -1, 1, cv2.NORM_MINMAX)
-        row.extend( hist.reshape(-1) )
-
-    for hist in hists_hsv:
-        hist = cv2.normalize(hist, None, -1, 1, cv2.NORM_MINMAX)
-        row.extend( hist.reshape(-1) )
-
-    outline = cv2.normalize(outline, None, -1, 1, cv2.NORM_MINMAX)
-    row.extend(outline)
-
-    return row
 
 def get_codewords(classes, neg=-1, pos=1):
     """Returns codewords for a list of classes."""
@@ -341,6 +288,149 @@ def get_classification(codewords, codeword, error=0.001):
     classes = [x[1] for x in sorted(classes, reverse=True)]
     return classes
 
+class DictObject(argparse.Namespace):
+    def __init__(self, d):
+        for a, b in d.iteritems():
+            if isinstance(b, (list, tuple)):
+               setattr(self, a, [DictObject(x) if isinstance(x, dict) else x for x in b])
+            else:
+               setattr(self, a, DictObject(b) if isinstance(b, dict) else b)
+
+class Fingerprint(object):
+
+    def __init__(self):
+        self.path = None
+        self.params = None
+        self.img = None
+        self.mask = None
+        self.bin_mask = None
+
+    def open(self, path, params):
+        self.img = cv2.imread(path)
+        self.params = params
+        if self.img == None or self.img.size == 0:
+            return None
+        self.path = path
+        self.mask = None
+        self.bin_mask = None
+        return self.img
+
+    def preprocess(self):
+        if self.img == None:
+            raise ValueError("No image loaded")
+
+        if 'preprocess' not in self.params:
+            return
+
+        logging.info("Preprocessing %s..." % self.path)
+
+        # Resize the image if it is larger then the threshold.
+        max_px = max(self.img.shape[:2])
+        maxdim = getattr(self.params.preprocess, 'maximum_dimension', None)
+        if maxdim and max_px > maxdim:
+            logging.info("- Scaling down...")
+            rf = float(maxdim) / max_px
+            self.img = cv2.resize(self.img, None, fx=rf, fy=rf)
+
+        # Perform segmentation.
+        segmentation = getattr(self.params.preprocess, 'segmentation', None)
+        if segmentation:
+            logging.info("- Segmenting...")
+            iterations = getattr(segmentation, 'iterations', 5)
+            margin = getattr(segmentation, 'margin', 1)
+            output_folder = getattr(segmentation, 'output_folder', None)
+
+            self.mask = ft.segment(self.img, iterations, margin)
+            self.bin_mask = np.where((self.mask==cv2.GC_FGD) + (self.mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
+
+            if output_folder and os.path.isdir(output_folder):
+                # Merge the binary mask with the image.
+                img_masked = cv2.bitwise_and(self.img, self.img, mask=self.bin_mask)
+
+                # Save the masked image to the output folder.
+                fname_base = os.path.basename(self.path)
+                fname_parts = os.path.splitext(fname_base)
+                fname = "%s.png" % (fname_parts[0])
+                out_path = os.path.join(output_folder, fname)
+                cv2.imwrite(out_path, img_masked)
+
+    def make(self):
+        if self.img == None:
+            raise ValueError("No image loaded")
+
+        logging.info("Fingerprinting %s..." % self.path)
+
+        data_row = []
+
+        if not 'features' in self.params:
+            raise ValueError("Nothing to do. Features to extract not set.")
+
+        if 'color_histograms' in self.params.features:
+            logging.info("- Running color:histograms...")
+            data = self.get_color_histograms()
+            data_row.extend(data)
+
+        if 'shape360' in self.params.features:
+            logging.info("- Running shape:360...")
+            data = self.get_shape360()
+            data_row.extend(data)
+
+        return data_row
+
+    def get_color_histograms(self):
+        if self.bin_mask == None:
+            raise ValueError("Binary mask not set")
+
+        row = []
+        for colorspace, bins in vars(self.params.features.color_histograms).iteritems():
+            bins = [int(bins)] * len(colorspace)
+
+            if colorspace.lower() == "bgr":
+                colorspace = ft.CS_BGR
+                img = self.img
+            elif colorspace.lower() == "hsv":
+                colorspace = ft.CS_HSV
+                img = cv2.cvtColor(self.img, cv2.COLOR_BGR2HSV)
+            else:
+                raise ValueError("Unknown colorspace")
+
+            hists = ft.color_histograms(img, bins, self.bin_mask, colorspace)
+
+            for hist in hists:
+                hist = cv2.normalize(hist, None, -1, 1, cv2.NORM_MINMAX)
+                row.extend( hist.ravel() )
+        return row
+
+    def get_shape360(self):
+        if self.bin_mask == None:
+            raise ValueError("Binary mask not set")
+
+        step = getattr(self.params.features.shape360, 'step', 1)
+        t = getattr(self.params.features.shape360, 't', 8)
+
+        contour = ft.get_largest_countour(self.bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        intersects, center, rotation = ft.shape360(contour, step, t)
+
+        # For each angle save the minimum distance from center to contour.
+        shape = []
+        for angle in range(360):
+            mind = float("inf")
+            minp = None
+            for p in intersects[angle]:
+                d = ft.point_dist(center, p)
+                if d < mind:
+                    mind = d
+                    minp = p
+            if mind == float("inf"):
+                mind = 0
+            shape.append(mind)
+
+        # Normalize the shape.
+        shape = np.array(shape)
+        shape = cv2.normalize(shape, None, -1, 1, cv2.NORM_MINMAX)
+
+        return shape
+
 class TrainData(object):
     """Class for storing training data."""
 
@@ -350,7 +440,6 @@ class TrainData(object):
         self.labels = []
         self.input = []
         self.output = []
-        self.test_set = []
         self.counter = 0
 
     def read_from_file(self, path, ignore=["ID"], output_prefix="OUT"):
@@ -401,8 +490,7 @@ class TrainData(object):
         else:
             self.counter += 1
             i = self.counter - 1
-            is_test = self.counter in self.test_set
-            return (self.labels[i], self.input[i], self.output[i], is_test)
+            return (self.labels[i], self.input[i], self.output[i])
 
     def append(self, input, output, label=None):
         if isinstance(self.input, np.ndarray):
@@ -435,42 +523,11 @@ class TrainData(object):
         for i, row in enumerate(self.input):
             self.input[i] = cv2.normalize(row, None, alpha, beta, norm_type).reshape(-1)
 
-    def split(self, every=2):
-        if every < 2:
-            raise ValueError("Every must be at least 2")
-        if not isinstance(self.input, np.ndarray):
-            raise ValueError("Data must be finalized before running this function")
-        self.test_set = []
-        for i in range(len(self.input)):
-            if i % every == 0:
-                self.test_set.append(i)
-
-    def has_test_set(self):
-        return len(self.test_set) > 0
-
     def get_input(self, test=False):
-        if self.has_test_set():
-            tmp = []
-            for i in range(len(self.input)):
-                if test and i in self.test_set:
-                    tmp.append(self.input[i])
-                elif not test and i not in self.test_set:
-                    tmp.append(self.input[i])
-            return tmp
-        else:
-            return self.input
+        return self.input
 
     def get_output(self, test=False):
-        if self.has_test_set():
-            tmp = []
-            for i in range(len(self.output)):
-                if test and i in self.test_set:
-                    tmp.append(self.output[i])
-                elif not test and i not in self.test_set:
-                    tmp.append(self.output[i])
-            return tmp
-        else:
-            return self.output
+        return self.output
 
 class TrainANN(object):
     """Train an artificial neural network."""

@@ -57,7 +57,7 @@ def split_by_mask(img, mask):
         x,y,w,h = cv2.boundingRect(pointset)
         yield img[y:y+h, x:x+w]
 
-def hists(img, histsize=None, mask=None, colorspace=CS_BGR):
+def color_histograms(img, histsize=None, mask=None, colorspace=CS_BGR):
     """Convenience wrapper for :cv2:`calcHist`.
 
     Returns the histogram for each channel in `img`.
