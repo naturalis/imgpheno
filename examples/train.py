@@ -448,11 +448,18 @@ class Fingerprint(object):
         if self.bin_mask == None:
             raise ValueError("Binary mask not set")
 
+        rotation = getattr(self.params.features.shape_360, 'rotation', None)
         step = getattr(self.params.features.shape_360, 'step', 1)
         t = getattr(self.params.features.shape_360, 't', 8)
-
         contour = ft.get_largest_countour(self.bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        intersects, center, rotation = ft.shape_360(contour, step, t)
+
+        # If the rotation is not set, try to fit an ellipse on the contour to
+        # get the rotation angle.
+        if rotation == None:
+            box = cv2.fitEllipse(contour)
+            rotation = int(box[2])
+
+        intersects, center = ft.shape_360(contour, rotation, step, t)
 
         # For each angle save the minimum distance from center to contour.
         shape = []

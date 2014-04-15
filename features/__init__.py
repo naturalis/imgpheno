@@ -266,7 +266,7 @@ def shape_360(contour, rotation=0, step=1, t=8):
         for p in contour:
             p = np.array(p[0])
             x, y = p - center
-            if abs(slope) == float("inf"):
+            if math.isinf(slope):
                 if x == 0:
                     # Save points that are on the vertical axis.
                     weighted_points.append((0.0, tuple(p)))
@@ -317,7 +317,7 @@ def angled_line(center, angle, radius):
 
     The `angle` must be in degrees. The line's center is set at `center` and
     the line length is twice the `radius`. The line's angle is based on the
-    vertical axis if `horizontal` is False.
+    vertical axis.
     """
     if not isinstance(center, np.ndarray):
         center = np.array(center)
@@ -363,7 +363,9 @@ def side_of_line(l, p):
 def slope_from_angle(angle, inverse=False):
     """Returns the function slope for a given angle in degrees.
 
-    Returns ``float("inf")`` if the slope is vertical.
+    Returns ``float("inf")`` if the slope is vertical. When the origin (0,0)
+    of the matrix is in the upper left corner (as opposed to bottom left), set
+    `inverse` to True.
     """
     if angle % 180 == 0:
         a = float("inf")

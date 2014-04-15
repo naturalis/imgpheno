@@ -14,4 +14,4 @@ preprocess:
 features:
     color_histograms: {BGR: 10, HSV: 10}
     #shape_outline: {resolution: 15}
-    shape_360: {step: 1, t: 8}
+    shape_360: {rotation: 0, step: 1, t: 8}
