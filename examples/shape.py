@@ -16,7 +16,6 @@ import numpy as np
 
 import features as ft
 
-INTERSECT_DIST_MAX = 30
 BLACK = (0,0,0)
 GRAY = (105,105,105)
 BLUE = (255,0,0)
@@ -26,7 +25,6 @@ RED = (0,0,255)
 
 img = None
 img_src = None
-radius = 0
 rotation = 0
 intersects = None
 
@@ -57,9 +55,7 @@ def main():
 
     # Create UI
     cv2.namedWindow('image')
-    cv2.createTrackbar('Shape Angle', 'image', 0, 179, set_angle_shape)
-    cv2.createTrackbar('Radius', 'image', 0, 400, set_radius)
-    cv2.setTrackbarPos('Radius', 'image', 200)
+    cv2.createTrackbar('Angle', 'image', 0, 179, set_angle_shape)
 
     i = 0
     process_image(args, images[i])
@@ -90,14 +86,6 @@ def set_angle_shape(x):
         return
     draw_axis()
     draw_angle_shape(x)
-
-def set_radius(x):
-    global radius, img
-
-    radius = x
-    if img == None:
-        return
-    draw_axis()
 
 def process_image(args, path):
     global intersects, rotation, img, img_src, center
@@ -135,7 +123,7 @@ def process_image(args, path):
 
 def draw_axis():
     """Draw horizontal, vertical, and symmetry axis."""
-    global center, img, img_src, radius
+    global center, img, img_src
 
     # Redraw the image.
     img = img_src.copy()
@@ -150,18 +138,18 @@ def draw_axis():
     cv2.imshow('image', img)
 
 def draw_angle_shape(angle):
-    global rotation, img, center, radius, intersects
+    global rotation, img, center, intersects
 
     # Draw the angle.
-    #line = ft.angled_line(center, angle, radius)
+    #line = ft.angled_line(center, angle, 100)
     line = ft.extreme_points(intersects[angle] + intersects[angle+180])
     cv2.line(img, tuple(line[0]), tuple(line[1]), GREEN)
 
     # Draw main intersections.
     for x,y in intersects[angle]:
-        cv2.circle(img, (x,y), 5, BLUE)
-    for x,y in intersects[angle+180]:
         cv2.circle(img, (x,y), 5, RED)
+    for x,y in intersects[angle+180]:
+        cv2.circle(img, (x,y), 5, BLUE)
 
     cv2.imshow('image', img)
 

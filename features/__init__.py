@@ -233,7 +233,16 @@ def shape_360(contour, step=1, t=8):
 
     # Fit an ellipse on the contour to get the angle of the symmetry axis.
     box = cv2.fitEllipse(contour)
-    rotation = box[2]
+    rotation = int(box[2])
+
+    # If the rotation is more than 90 degrees, assume the object is rotated to
+    # the left.
+    if rotation <= 90:
+        a = 0
+        b = 180
+    else:
+        a = 180
+        b = 0
 
     # Get distances from center to contour intersections for every degree
     # from the symmetry axis.
@@ -288,10 +297,10 @@ def shape_360(contour, step=1, t=8):
         intersects[angle+180] = []
         for p in points:
             side = side_of_line(division_line, p)
-            if side > 0:
-                intersects[angle].append(p)
-            elif side < 0:
-                intersects[angle+180].append(p)
+            if side < 0:
+                intersects[angle+a].append(p)
+            elif side > 0:
+                intersects[angle+b].append(p)
             else:
                 assert side != 0, "A point cannot be on the division line"
 
