@@ -113,9 +113,13 @@ def process_image(args, path):
     # Obtain contours (all points) from the mask.
     contour = ft.get_largest_countour(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
+    # Fit an ellipse on the contour to get the rotation angle.
+    box = cv2.fitEllipse(contour)
+    rotation = int(box[2])
+
     # Get the shape360 feature.
     logging.info("- Obtaining shape...")
-    intersects, center, rotation = ft.shape_360(contour)
+    intersects, center = ft.shape_360(contour, rotation)
 
     logging.info("- Done")
 

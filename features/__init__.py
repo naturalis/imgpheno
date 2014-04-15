@@ -214,26 +214,32 @@ def shape_outline(img, resolution=10):
 
     return np.array(outline)
 
-def shape_360(contour, step=1, t=8):
+def shape_360(contour, rotation=0, step=1, t=8):
     """Returns a shape feature from a contour.
 
-    Shape is returned as a tuple ``(intersects, center, rotation)``, where
-    ``intersects`` is a dict where the keys are angles and the values are lists
-    of intersecting points; ``center`` and ``rotation`` specify the center and
-    rotation of the contour, respectively. The step size for the angle can be
-    set with `step`. The `t` argument is passed to :meth:`weighted_points_nearest`.
-    The returned shape is rotation invariant up to a small rotation (< 90).
+    The rotation in degrees of the contour can be set with `rotation`, which
+    must be a value between 0 and 179 inclusive. A rotation above 90 degrees
+    is interpreted as a rotation to the left (e.g. a rotation of 120 is
+    interpreted as 60 degrees to the left). The returned shape is shifted by
+    the rotation. The step size for the angle can be set with `step`. Argument
+    `t` is passed to :meth:`weighted_points_nearest`. The returned shape is
+    rotation invariant provided that the rotation argument is set properly and
+    the rotation is no more than 90 degrees left or right.
+
+    Shape is returned as a tuple ``(intersects, center)``, where ``intersects``
+    is a dict where the keys are 0 based angles and the values are lists
+    of intersecting points. If `step` is set to 1, then the dict will contain
+    the intersections for 360 degrees. ``center`` specifies the center of the
+    contour and can be used to calculate distances from center to contour.
     """
     if len(contour) < 6:
         raise ValueError("Contour must have at least 6 points, found %d" % len(contour))
+    if not 0 <= rotation <= 179:
+        raise ValueError("The rotation must be between 0 and 179 inclusive, found %d" % rotation)
 
     # Get the center.
     center, _ = cv2.minEnclosingCircle(contour)
     center = np.int32(center)
-
-    # Fit an ellipse on the contour to get the angle of the symmetry axis.
-    box = cv2.fitEllipse(contour)
-    rotation = int(box[2])
 
     # If the rotation is more than 90 degrees, assume the object is rotated to
     # the left.
@@ -304,7 +310,7 @@ def shape_360(contour, step=1, t=8):
             else:
                 assert side != 0, "A point cannot be on the division line"
 
-    return (intersects, center, rotation)
+    return (intersects, center)
 
 def angled_line(center, angle, radius):
     """Returns an angled line.
