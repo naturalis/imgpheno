@@ -62,18 +62,20 @@ def main():
     cv2.setTrackbarPos('Radius', 'image', 200)
 
     i = 0
+    process_image(args, images[i])
     while True:
-        process_image(args, images[i])
         k = cv2.waitKey(0) & 0xFF
 
         if k == ord('n'):
             i += 1
             if i >= len(images):
                 i = 0
+            process_image(args, images[i])
         elif k == ord('p'):
             i -= 1
             if i < 0:
                 i = len(images) - 1
+            process_image(args, images[i])
         elif k == ord('q'):
             break
 
@@ -125,7 +127,7 @@ def process_image(args, path):
 
     # Get the shape360 feature.
     logging.info("- Obtaining shape...")
-    intersects, center, rotation = ft.shape360(contour)
+    intersects, center, rotation = ft.shape_360(contour)
 
     logging.info("- Done")
 
@@ -151,7 +153,7 @@ def draw_angle_shape(angle):
     global rotation, img, center, radius, intersects
 
     # Draw the angle.
-    #line = ft.angled_line(center, angle + rotation, radius)
+    #line = ft.angled_line(center, angle, radius)
     line = ft.extreme_points(intersects[angle] + intersects[angle+180])
     cv2.line(img, tuple(line[0]), tuple(line[1]), GREEN)
 
