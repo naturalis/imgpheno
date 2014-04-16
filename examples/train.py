@@ -172,6 +172,9 @@ def train_data(args):
 
     training_data.finalize()
 
+    # Round all values.
+    training_data.round_input(4)
+
     # Write data rows.
     for label, input_data, output_data in training_data:
         row = []
@@ -573,10 +576,13 @@ class TrainData(object):
         for i, row in enumerate(self.input):
             self.input[i] = cv2.normalize(row, None, alpha, beta, norm_type).reshape(-1)
 
-    def get_input(self, test=False):
+    def round_input(self, decimals=4):
+        self.input = np.around(self.input, decimals)
+
+    def get_input(self):
         return self.input
 
-    def get_output(self, test=False):
+    def get_output(self):
         return self.output
 
 class TrainANN(object):
