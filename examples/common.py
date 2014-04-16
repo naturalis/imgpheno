@@ -51,7 +51,7 @@ class TrainData(object):
 
         if self.num_input < 1 or self.num_output < 1:
             fh.close()
-            raise ValueError("Incorrect format for the input file")
+            raise ValueError("Incorrect format")
 
         input_end = input_start + self.num_input
         output_end = output_start + self.num_output

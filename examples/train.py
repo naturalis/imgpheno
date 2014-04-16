@@ -271,7 +271,11 @@ def test_ann(args):
     ann.create_from_file(args.ann)
 
     test_data = common.TrainData()
-    test_data.read_from_file(args.test_data)
+    try:
+        test_data.read_from_file(args.test_data)
+    except ValueError as e:
+        sys.stderr.write("Failed to process the test data: %s\n" % e)
+        exit(1)
 
     sys.stderr.write("Testing the neural network...\n")
     fann_test_data = libfann.training_data()
