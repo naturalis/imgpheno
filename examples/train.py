@@ -145,7 +145,8 @@ def train_data(args):
     if 'shape_360' in yml.features:
         n = 360 / getattr(yml.features.shape_360, 'step', 1)
         for i in range(n):
-            header_data.append("SHAPE.%d" % i)
+            header_data.append("MEAN.%d" % i)
+            header_data.append("SD.%d" % i)
 
     for i in range(len(classes)):
         header_out.append("OUT.%d" % (i+1,))
@@ -456,24 +457,34 @@ class Fingerprint(object):
         intersects, center = ft.shape_360(contour, rotation, step, t)
 
         # For each angle save the minimum distance from center to contour.
-        shape = []
+        means = []
+        sds = []
         for angle in range(360):
-            mind = float("inf")
-            minp = None
+            distances = []
             for p in intersects[angle]:
                 d = ft.point_dist(center, p)
-                if d < mind:
-                    mind = d
-                    minp = p
-            if mind == float("inf"):
-                mind = 0
-            shape.append(mind)
+                distances.append(d)
 
-        # Normalize the shape.
-        shape = np.array(shape)
-        shape = cv2.normalize(shape, None, -1, 1, cv2.NORM_MINMAX)
+            if len(distances) == 0:
+                mean = 0
+                sd = 0
+            else:
+                mean = np.mean(distances, dtype=np.float32)
+                if len(distances) > 1:
+                    sd = np.std(distances, ddof=1, dtype=np.float32)
+                else:
+                    sd = 0
 
-        return shape
+            means.append(mean)
+            sds.append(sd)
+
+        # Normalize the data.
+        means = np.array(means)
+        means = cv2.normalize(means, None, -1, 1, cv2.NORM_MINMAX)
+        sds = np.array(sds)
+        sds = cv2.normalize(sds, None, -1, 1, cv2.NORM_MINMAX)
+
+        return np.array( zip(means, sds) ).ravel()
 
 if __name__ == "__main__":
     main()
