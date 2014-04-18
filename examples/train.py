@@ -156,7 +156,6 @@ def train_data(images_path, features_path, output_path):
                 logging.info("Failed to read %s. Skipping." % im_path)
                 continue
 
-            fp.preprocess()
             data = fp.make()
 
             assert len(data) == len(header_data), "Data length mismatch"
@@ -288,7 +287,6 @@ def classify(image_path, ann_path, features_path, error):
     if fp.open(image_path, yml) == None:
         sys.stderr.write("Failed to read %s\n" % image_path)
         return 1
-    fp.preprocess()
     features = fp.make()
 
     # Classify the image.
@@ -331,27 +329,25 @@ class Fingerprint(object):
         self.bin_mask = None
         return self.img
 
-    def preprocess(self):
+    def _preprocess(self):
         if self.img == None:
             raise ValueError("No image loaded")
 
         if 'preprocess' not in self.params:
             return
 
-        logging.info("Preprocessing %s..." % self.path)
-
         # Resize the image if it is larger then the threshold.
         max_px = max(self.img.shape[:2])
         maxdim = getattr(self.params.preprocess, 'maximum_dimension', None)
         if maxdim and max_px > maxdim:
-            logging.info("- Scaling down...")
+            logging.info("Scaling down...")
             rf = float(maxdim) / max_px
             self.img = cv2.resize(self.img, None, fx=rf, fy=rf)
 
         # Perform segmentation.
         segmentation = getattr(self.params.preprocess, 'segmentation', None)
         if segmentation:
-            logging.info("- Segmenting...")
+            logging.info("Segmenting...")
             iterations = getattr(segmentation, 'iterations', 5)
             margin = getattr(segmentation, 'margin', 1)
             output_folder = getattr(segmentation, 'output_folder', None)
@@ -374,7 +370,11 @@ class Fingerprint(object):
         if self.img == None:
             raise ValueError("No image loaded")
 
-        logging.info("Fingerprinting %s..." % self.path)
+        logging.info("Processing %s..." % self.path)
+
+        self._preprocess()
+
+        logging.info("Extracting features...")
 
         data_row = []
 
@@ -412,6 +412,9 @@ class Fingerprint(object):
             elif colorspace.lower() == "hsv":
                 colorspace = ft.CS_HSV
                 img = cv2.cvtColor(self.img, cv2.COLOR_BGR2HSV)
+            elif colorspace.lower() == "luv":
+                colorspace = ft.CS_LUV
+                img = cv2.cvtColor(self.img, cv2.COLOR_BGR2LUV)
             else:
                 raise ValueError("Unknown colorspace")
 

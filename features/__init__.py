@@ -14,12 +14,13 @@ import cv2
 # Color spaces
 CS_BGR = 101
 CS_HSV = 102
-CS_LCH = 103
+CS_LUV = 103
 
 # Color space ranges used in OpenCV. Each upper boundary is exclusive.
 CS_RANGE = {
     CS_BGR: ([0, 256], [0, 256], [0, 256]),
-    CS_HSV: ([0, 180], [0, 256], [0, 256])
+    CS_HSV: ([0, 180], [0, 256], [0, 256]),
+    CS_LUV: ([0, 101], [-134, 221], [-140, 123])
 }
 
 def segment(img, iters=5, margin=5):
@@ -66,6 +67,7 @@ def color_histograms(img, histsize=None, mask=None, colorspace=CS_BGR):
     one of the following:
         * ``CS_BGR`` for the BGR color space.
         * ``CS_HSV`` for the HSV color space.
+        * ``CS_LUV`` for the CIE 1976 (L\*, u\*, v\*) color space.
 
     Default value is ``CS_BGR``.
 
@@ -74,6 +76,7 @@ def color_histograms(img, histsize=None, mask=None, colorspace=CS_BGR):
         OpenCV uses the following color space ranges:
             * BGR: B=0-255, G=0-255, R=0-255
             * HSV: H=0-179, S=0-255, V=0-255
+            * LUV: L=0-100, U=-134-220, V=-140-122
 
         These ranges are also set in ``CS_RANGE``.
     """
@@ -85,7 +88,7 @@ def color_histograms(img, histsize=None, mask=None, colorspace=CS_BGR):
     hists = []
     for ch in range(img.ndim):
         if histsize == None:
-            bins = CS_RANGE[colorspace][ch][1]
+            bins = abs(CS_RANGE[colorspace][ch][1] - CS_RANGE[colorspace][ch][0] - 1)
         else:
             bins = histsize[ch]
 
