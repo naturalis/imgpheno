@@ -1,8 +1,0 @@
----
-ann:
-    hidden_layers: 1       # Number of hidden neuron layers. Default is 1
-    hidden_neurons: 8      # Number of hidden neurons per hidden layer. Default is 8
-    epochs: 500000         # Maximum number of epochs. Default is 500000
-    error: 0.001           # Desired error. Default is 0.001
-    learning_rate: 0.7     # Learning rate. Default is 0.7
-    connection_rate: 1     # Connection rate. Default is 1, a fully connected network.

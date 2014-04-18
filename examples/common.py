@@ -37,8 +37,11 @@ class TrainData(object):
         header = reader.next()
         input_start = None
         output_start = None
+        label_idx = None
         for i, field in enumerate(header):
             if field in ignore:
+                if field == "ID":
+                    label_idx = i
                 continue
             if field.startswith(output_prefix):
                 if output_start == None:
@@ -57,7 +60,10 @@ class TrainData(object):
         output_end = output_start + self.num_output
 
         for row in reader:
-            self.labels.append(None)
+            if label_idx != None:
+                self.labels.append(row[label_idx])
+            else:
+                self.labels.append(None)
             self.input.append(row[input_start:input_end])
             self.output.append(row[output_start:output_end])
 

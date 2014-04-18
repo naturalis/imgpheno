@@ -1,7 +1,4 @@
 ---
-# List of class names used for classification. The order does not matter.
-classes: [Brachypetalum, Cochlopetalum, Paphiopedilum, Parvisepalum]
-
 # Preprocessing steps to perform on images before features are extracted.
 preprocess:
     # Limit the maximum dimension for an input image (optional). The input
@@ -23,3 +20,21 @@ features:
     color_histograms: {BGR: 10, HSV: 10}
     #shape_outline: {resolution: 15}
     shape_360: {rotation: 0, step: 1, t: 8}
+
+# Parameters for training the artificial neural network.
+ann:
+    # Number of hidden neuron layers. Default is 1
+    hidden_layers: 1
+    # Number of hidden neurons per hidden layer. Default is 8
+    hidden_neurons: 8
+    # Maximum number of epochs. Default is 500000
+    epochs: 500000
+    # Desired error. Default is 0.001
+    error: 0.0001
+    # Learning rate. Default is 0.7
+    learning_rate: 0.7
+    # Connection rate. Default is 1, a fully connected network.
+    connection_rate: 1
+
+# List of class names used for classification. The order does not matter.
+classes: [Brachypetalum, Cochlopetalum, Paphiopedilum, Parvisepalum]

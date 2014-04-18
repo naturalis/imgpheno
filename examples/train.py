@@ -33,71 +33,79 @@ def main():
 
     # Create an argument parser for sub-command 'traindata'.
     help_data = """Create a tab separated file with training data. Preprocessing
-    steps and features to extract must be set in a YAML file. See features.yml
+    steps and features to extract must be set in a YAML file. See orchids.yml
     for an example.
     """
     parser_data = subparsers.add_parser('data',
         help=help_data,
         description=help_data)
-    parser_data.add_argument("--features", metavar="FILE", required=True, help="Path to a YAML file with feature extraction parameters.")
+    parser_data.add_argument("--conf", metavar="FILE", required=True, help="Path to a YAML file with feature extraction parameters.")
     parser_data.add_argument("--output", "-o", metavar="FILE", required=True, help="Output file name for training data. Any existing file with same name will be overwritten.")
     parser_data.add_argument("images", metavar="PATH", help="Directory path to load image files from. Images must be in level one sub directories. Sub directory names will be used as class names.")
 
     # Create an argument parser for sub-command 'trainann'.
     help_ann = """Train an artificial neural network. Optional training
-    parameters can be set in a separate YAML file. See train-params.yml
+    parameters can be set in a separate YAML file. See orchids.yml
     for an example file.
     """
     parser_ann = subparsers.add_parser('ann',
         help=help_ann,
         description=help_ann)
     parser_ann.add_argument("--test-data", metavar="FILE", help="Path to tab separated file with test data.")
-    parser_ann.add_argument("--params", metavar="FILE", help="Path to a YAML file with ANN training parameters.")
+    parser_ann.add_argument("--conf", metavar="FILE", help="Path to a YAML file with ANN training parameters.")
     parser_ann.add_argument("--output", "-o", metavar="FILE", required=True, help="Output file name for the artificial neural network. Any existing file with same name will be overwritten.")
     parser_ann.add_argument("data", metavar="FILE", help="Path to tab separated file with training data.")
 
     # Create an argument parser for sub-command 'test-ann'.
-    help_test_ann = "Test an artificial neural network"
+    help_test_ann = """Test an artificial neural network. If `--output` is
+    set, then `--conf` must also be set. See orchids.yml for an example YAML
+    file with class names."""
     parser_test_ann = subparsers.add_parser('test-ann',
         help=help_test_ann,
         description=help_test_ann)
-    parser_test_ann.add_argument("--ann", metavar="FILE", required=True, help="A trained artificial neural network")
-    parser_test_ann.add_argument("--data", metavar="FILE", required=True, help="Tab separated file containing test data")
+    parser_test_ann.add_argument("--ann", metavar="FILE", required=True, help="A trained artificial neural network.")
+    parser_test_ann.add_argument("--output", "-o", metavar="FILE", help="Output file name for the test results. Specifying this option will output a table with the classification result for each sample.")
+    parser_test_ann.add_argument("--conf", metavar="FILE", help="Path to a YAML file with class names.")
+    parser_test_ann.add_argument("--error", metavar="N", type=float, default=0.01, help="The maximum error for classification. Default is 0.01")
+    parser_test_ann.add_argument("data", metavar="FILE", help="Path to tab separated file containing test data.")
 
     # Create an argument parser for sub-command 'classify'.
-    help_classify = "Classify an image"
+    help_classify = """Classify an image. See orchids.yml for an example YAML
+    file with class names."""
     parser_classify = subparsers.add_parser('classify',
         help=help_classify,
         description=help_classify)
     parser_classify.add_argument("--ann", metavar="FILE", required=True, help="Path to a trained artificial neural network file.")
-    parser_classify.add_argument("--features", metavar="FILE", required=True, help="Path to a YAML file with feature extraction parameters.")
-    parser_classify.add_argument("--error", metavar="N", type=float, default=0.001, help="Error threshold. Default is 0.001")
+    parser_classify.add_argument("--conf", metavar="FILE", required=True, help="Path to a YAML file with class names.")
+    parser_classify.add_argument("--error", metavar="N", type=float, default=0.01, help="The maximum error for classification. Default is 0.01")
     parser_classify.add_argument("image", metavar="FILE", help="Path to image file to be classified.")
 
     # Parse arguments.
     args = parser.parse_args()
 
     if sys.argv[1] == 'data':
-        train_data(args.images, args.features, args.output)
+        train_data(args.images, args.conf, args.output)
     elif sys.argv[1] == 'ann':
-        train_ann(args.data, args.output, args.test_data, args.params)
+        train_ann(args.data, args.output, args.test_data, args.conf)
     elif sys.argv[1] == 'test-ann':
-        test_ann(args.ann, args.data)
+        if args.output and not args.conf:
+            sys.stderr.write("Option '--conf' must be set when '--output' is set.\n")
+            sys.exit()
+        test_ann(args.ann, args.data, args.output, args.conf, args.error)
     elif sys.argv[1] == 'classify':
-        classify(args.image, args.ann, args.features, args.error)
+        classify(args.image, args.ann, args.conf, args.error)
 
     sys.exit()
 
-def train_data(images_path, features_path, output_path):
-    for path in (images_path, features_path):
+def train_data(images_path, conf_path, output_path):
+    for path in (images_path, conf_path):
         if not os.path.exists(path):
             sys.stderr.write("Cannot open %s (no such file or directory)\n" % path)
             return 1
 
-    yml_file = open(features_path, 'r')
-    yml = yaml.load(yml_file)
-    yml = common.DictObject(yml)
-    yml_file.close()
+    yml = open_yaml(conf_path)
+    if not yml:
+        return 1
 
     if 'preprocess' in yml and 'segmentation' in yml.preprocess:
         path = getattr(yml.preprocess.segmentation, 'output_folder', None)
@@ -178,40 +186,17 @@ def train_data(images_path, features_path, output_path):
     out_file.close()
     logging.info("Training data written to %s" % output_path)
 
-def get_image_files(path):
-    fl = []
-    for item in os.listdir(path):
-        im_path = os.path.join(path, item)
-        if os.path.isdir(im_path):
-            fl.extend( get_image_files(im_path) )
-        elif os.path.isfile(im_path):
-            mime = mimetypes.guess_type(im_path)[0]
-            if mime and mime.startswith('image'):
-                fl.append(im_path)
-    return fl
-
-def get_codewords(classes, neg=-1, pos=1):
-    """Returns codewords for a list of classes."""
-    n =  len(classes)
-    codewords = {}
-    for i, cls in enumerate(sorted(classes)):
-        cw = [neg] * n
-        cw[i] = pos
-        codewords[cls] = cw
-    return codewords
-
-def train_ann(train_data_path, output_path, test_data_path=None, ann_params_path=None):
-    for path in (train_data_path, test_data_path, ann_params_path):
+def train_ann(train_data_path, output_path, test_data_path=None, conf_path=None):
+    for path in (train_data_path, test_data_path, conf_path):
         if path and not os.path.exists(path):
             sys.stderr.write("Cannot open %s (no such file or directory)\n" % path)
             return 1
 
     ann_trainer = common.TrainANN()
-    if ann_params_path:
-        yml_file = open(ann_params_path, 'r')
-        yml = yaml.load(yml_file)
-        yml = common.DictObject(yml)
-        yml_file.close()
+    if conf_path:
+        yml = open_yaml(conf_path)
+        if not yml:
+            return 1
 
         if 'ann' in yml:
             ann_trainer.connection_rate = getattr(yml.ann, 'connection_rate', 1)
@@ -238,10 +223,21 @@ def train_ann(train_data_path, output_path, test_data_path=None, ann_params_path
         error = ann_trainer.test(test_data)
         logging.info("Mean Square Error on test data: %f" % error)
 
-def test_ann(ann_path, test_data_path):
-    for path in (ann_path, test_data_path):
+def test_ann(ann_path, test_data_path, output_path=None, conf_path=None, error=0.01):
+    for path in (ann_path, test_data_path, conf_path):
         if path and not os.path.exists(path):
             sys.stderr.write("Cannot open %s (no such file or directory)\n" % path)
+            return 1
+
+    if output_path and not conf_path:
+        raise ValueError("Argument `conf_path` must be set when `output_path` is set")
+
+    if conf_path:
+        yml = open_yaml(conf_path)
+        if not yml:
+            return 1
+        if 'classes' not in yml:
+            sys.stderr.write("Classes are not set in the YAML file. Missing object 'classes'.\n")
             return 1
 
     ann = libfann.neural_net()
@@ -260,20 +256,66 @@ def test_ann(ann_path, test_data_path):
 
     ann.test_data(fann_test_data)
 
-    error = ann.get_MSE()
-    logging.info("Mean Square Error on test data: %f" % error)
+    mse = ann.get_MSE()
+    logging.info("Mean Square Error on test data: %f" % mse)
 
-def classify(image_path, ann_path, features_path, error):
-    for path in (image_path, ann_path, features_path):
+    if not output_path:
+        return
+
+    out_file = open(output_path, 'w')
+    out_file.write( "%s\n" % "\t".join(['ID','Class','Classification','Match']) )
+
+    # Get codeword for each class.
+    codewords = get_codewords(yml.classes)
+
+    total = 0
+    correct = 0
+    for label, input, output in test_data:
+        total += 1
+        row = []
+
+        if label:
+            row.append(label)
+        else:
+            row.append("")
+
+        if len(codewords) != len(output):
+            sys.stderr.write("Codeword length (%d) does not match the number of classes. "
+                "Please make sure the correct classes are set in %s\n" % (len(output), conf_path))
+            exit(1)
+
+        class_e = get_classification(codewords, output, error)
+        assert len(class_e) == 1, "The codeword for a class can only have one positive value"
+        row.append(class_e[0])
+
+        codeword = ann.run(input)
+        class_f = get_classification(codewords, codeword, error)
+        row.append(", ".join(class_f))
+
+        if class_f == class_e or (len(class_f) > 1 and class_f[0] == class_e[0]):
+            row.append("+")
+            correct += 1
+        else:
+            row.append("-")
+
+        out_file.write( "%s\n" % "\t".join(row) )
+
+    fraction = float(correct) / total
+    out_file.write( "%s\n" % "\t".join(['','','',"%.3f" % fraction]) )
+    out_file.close()
+
+    logging.info("Correctly classified: %.1f%%" % (fraction*100))
+    logging.info("Testing results written to %s" % output_path)
+
+def classify(image_path, ann_path, conf_path, error):
+    for path in (image_path, ann_path, conf_path):
         if path and not os.path.exists(path):
             sys.stderr.write("Cannot open %s (no such file or directory)\n" % path)
             return 1
 
-    yml_file = open(features_path, 'r')
-    yml = yaml.load(yml_file)
-    yml = common.DictObject(yml)
-    yml_file.close()
-
+    yml = open_yaml(conf_path)
+    if not yml:
+        return 1
     if 'classes' not in yml:
         sys.stderr.write("Classes are not set in the YAML file. Missing object 'classes'.")
         return 1
@@ -301,7 +343,32 @@ def classify(image_path, ann_path, features_path, error):
     logging.info("Codeword: %s" % codeword)
     logging.info("Classification: %s" % ", ".join(classification))
 
-def get_classification(codewords, codeword, error=0.001):
+
+def get_image_files(path):
+    fl = []
+    for item in os.listdir(path):
+        im_path = os.path.join(path, item)
+        if os.path.isdir(im_path):
+            fl.extend( get_image_files(im_path) )
+        elif os.path.isfile(im_path):
+            mime = mimetypes.guess_type(im_path)[0]
+            if mime and mime.startswith('image'):
+                fl.append(im_path)
+    return fl
+
+def get_codewords(classes, neg=-1, pos=1):
+    """Returns codewords for a list of classes."""
+    n =  len(classes)
+    codewords = {}
+    for i, cls in enumerate(sorted(classes)):
+        cw = [neg] * n
+        cw[i] = pos
+        codewords[cls] = cw
+    return codewords
+
+def get_classification(codewords, codeword, error=0.01):
+    if len(codewords) != len(codeword):
+        raise ValueError("Lenth of `codewords` must be equal to `codeword`")
     classes = []
     for cls, cw in codewords.items():
         for i, code in enumerate(cw):
@@ -309,6 +376,18 @@ def get_classification(codewords, codeword, error=0.001):
                 classes.append((codeword[i], cls))
     classes = [x[1] for x in sorted(classes, reverse=True)]
     return classes
+
+def open_yaml(path):
+    if not os.path.isfile(path):
+        sys.stderr.write("Cannot open %s (no such file)\n" % path)
+        return None
+
+    f = open(path, 'r')
+    yml = yaml.load(f)
+    yml = common.DictObject(yml)
+    f.close()
+
+    return yml
 
 class Fingerprint(object):
 
@@ -452,7 +531,8 @@ class Fingerprint(object):
 
         intersects, center = ft.shape_360(contour, rotation, step, t)
 
-        # For each angle save the minimum distance from center to contour.
+        # For each angle save the mean distance from center to contour and
+        # the standard deviation for the distances.
         means = []
         sds = []
         for angle in range(360):
