@@ -439,9 +439,7 @@ class Fingerprint(object):
                 img_masked = cv2.bitwise_and(self.img, self.img, mask=self.bin_mask)
 
                 # Save the masked image to the output folder.
-                fname_base = os.path.basename(self.path)
-                fname_parts = os.path.splitext(fname_base)
-                fname = "%s.png" % (fname_parts[0])
+                fname = os.path.basename(self.path)
                 out_path = os.path.join(output_folder, fname)
                 cv2.imwrite(out_path, img_masked)
 

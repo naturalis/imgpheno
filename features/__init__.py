@@ -272,7 +272,7 @@ def shape_360(contour, rotation=0, step=1, t=8):
             if math.isinf(slope):
                 if x == 0:
                     # Save points that are on the vertical axis.
-                    weighted_points.append((0.0, tuple(p)))
+                    weighted_points.append( (1, tuple(p)) )
             else:
                 y_exp = slope * x
                 d = abs(y - y_exp)

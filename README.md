@@ -13,4 +13,4 @@ This Python module has the following dependencies:
 
 For some of the example scripts you need additional dependencies:
 
-* python-yaml / PyYAML (>= 3.10)
+* python-yaml / PyYAML
