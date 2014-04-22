@@ -492,4 +492,19 @@ def get_major_defects(contour):
         major_defects.append( (distance, farthest_point) )
     return sorted(major_defects, reverse=True)
 
+def mask_from_contour(contour, shape):
+    """Returns a binary mask from a contour.
+
+    The returned mask will have the shape of `shape`, a tuple of the format
+    ``(height, width)``.
+    """
+    h, w = shape
+    m = np.zeros((h,w), dtype=np.uint8)
+    for y in range(h):
+        for x in range(w):
+            d = cv2.pointPolygonTest(contour, (x,y), False)
+            if d >= 0:
+                m.itemset((y,x), 1)
+    return m
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

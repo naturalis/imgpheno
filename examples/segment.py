@@ -4,9 +4,10 @@
 """This program is a demonstration of image segmentation.
 
 The following key bindings are available:
-* O - see the original image
-* S - see the segmented image
-* Q - exit
+  O - display the original image
+  S - display the segmented image
+  L - display the largest segment
+  Q - exit
 """
 
 import argparse
@@ -51,8 +52,13 @@ def main():
     # Create a binary mask. Foreground is made white, background black.
     bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
 
+    # Create a binary mask for the largest contour.
+    contour = ft.get_largest_countour(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    bin_mask2 = ft.mask_from_contour(contour, bin_mask.shape)
+
     # Merge the binary mask with the image.
     img_masked = cv2.bitwise_and(img, img, mask=bin_mask)
+    img_masked2 = cv2.bitwise_and(img, img, mask=bin_mask2)
 
     # Display the image in a window.
     cv2.namedWindow('image')
@@ -65,6 +71,8 @@ def main():
             cv2.imshow('image', img)
         elif k == ord('s'):
             cv2.imshow('image', img_masked)
+        elif k == ord('l'):
+            cv2.imshow('image', img_masked2)
         elif k == ord('q'):
             break
 
