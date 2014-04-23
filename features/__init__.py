@@ -253,7 +253,7 @@ def shape_360(contour, rotation=0, step=1, t=8):
         a = 180
         b = 0
 
-    # Get distances from center to contour intersections for every degree
+    # Get the intersecting points with the contour for every degree
     # from the symmetry axis.
     intersects = {}
     for angle in range(0, 180, step):
@@ -261,14 +261,20 @@ def shape_360(contour, rotation=0, step=1, t=8):
         # the rotation of the object.
         slope = slope_from_angle(angle + rotation, inverse=True)
 
+        # Since pixel points can only be defined with natural numbers,
+        # resulting in gaps in between two points, means the maximum
+        # gap is equal to the slope of the linear function.
+        gap_max = math.ceil(abs(slope))
+
         # Find al contour points that closely fit the angle's linear function.
         # Only save points for which the distance to the expected point is
         # no more than the maximum gap. Save each point with a weight value,
         # which is used for clustering.
         weighted_points = []
         for p in contour:
-            p = np.array(p[0])
-            x, y = p - center
+            p = p[0]
+            x = p[0] - center[0]
+            y = p[1] - center[1]
             if math.isinf(slope):
                 if x == 0:
                     # Save points that are on the vertical axis.
@@ -276,11 +282,6 @@ def shape_360(contour, rotation=0, step=1, t=8):
             else:
                 y_exp = slope * x
                 d = abs(y - y_exp)
-
-                # Since pixel points can only be defined with natural numbers,
-                # resulting in gaps in between two points, means the maximum
-                # gap is equal to the slope of the linear function.
-                gap_max = math.ceil(abs(slope))
                 if d <= gap_max:
                     w = 1 / (d+1)
                     weighted_points.append( (w, tuple(p)) )
