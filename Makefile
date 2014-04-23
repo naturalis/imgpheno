@@ -1,2 +1,2 @@
 test:
-	nosetests
+	python -m unittest discover -v
