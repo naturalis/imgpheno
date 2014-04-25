@@ -54,7 +54,7 @@ def split_image(path, args):
     img_masked = cv2.bitwise_and(img, img, mask=bin_mask)
 
     # Split the image into segments.
-    segments = ft.split_by_mask(img_masked, bin_mask)
+    segments = split_by_mask(img_masked, bin_mask)
 
     for i, im in enumerate(segments):
         if im.shape[0] < args.mindim or im.shape[1] < args.mindim:
@@ -62,12 +62,19 @@ def split_image(path, args):
 
         name = os.path.basename(path)
         name = os.path.splitext(name)
-        out_path = "%s_%d.png" % (name[0], i)
+        out_path = "%s_%d%s" % (name[0], i, name[1])
         out_path = os.path.join(args.output, out_path)
         cv2.imwrite(out_path, im)
 
     return 0
 
+def split_by_mask(img, mask):
+    contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    for contour in contours:
+        bin_mask = ft.mask_from_contour(contour, img.shape[:2])
+        img_masked = cv2.bitwise_and(img, img, mask=bin_mask)
+        x,y,w,h = cv2.boundingRect(contour)
+        yield img_masked[y:y+h, x:x+w]
+
 if __name__ == "__main__":
     main()
-
