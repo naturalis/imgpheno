@@ -164,7 +164,11 @@ def train_data(images_path, conf_path, output_path):
                 logging.info("Failed to read %s. Skipping." % im_path)
                 continue
 
-            data = fp.make()
+            try:
+                data = fp.make()
+            except:
+                logging.info("Fingerprint failed. Skipping.")
+                continue
 
             assert len(data) == len(header_data), "Data length mismatch"
 
@@ -447,7 +451,7 @@ class Fingerprint(object):
         if self.img == None:
             raise ValueError("No image loaded")
 
-        logging.info("Processing %s..." % self.path)
+        logging.info("Processing %s ..." % self.path)
 
         self._preprocess()
 

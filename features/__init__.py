@@ -253,8 +253,26 @@ def shape_360(contour, rotation=0, step=1, t=8):
         a = 180
         b = 0
 
-    # Get the intersecting points with the contour for every degree
-    # from the symmetry axis.
+    # Define the slope for each point and group points by slope.
+    slopes = {}
+    for p in contour:
+        p = tuple(p[0])
+        x = p[0] - center[0]
+        y = p[1] - center[1]
+
+        if x == 0:
+            s = float('inf')
+        else:
+            s = float(y) / x
+            s = round(s, 4)
+
+        if s in slopes:
+            slopes[s].append(p)
+        else:
+            slopes[s] = [p]
+
+    # Get the intersecting points with the contour for every degree from the
+    # symmetry axis.
     intersects = {}
     for angle in range(0, 180, step):
         # Get the slope for the linear function of this angle and account for
@@ -266,13 +284,32 @@ def shape_360(contour, rotation=0, step=1, t=8):
         # gap is equal to the slope of the linear function.
         gap_max = math.ceil(abs(slope))
 
-        # Find al contour points that closely fit the angle's linear function.
+        # Dmax set empirically.
+        dmax = gap_max * 0.20
+
+        # Make a selection of the contour points which somewhat fit the
+        # slope for this angle.
+        candidates = []
+        for s in slopes:
+            if math.isinf(slope):
+                if math.isinf(s):
+                    d = 0
+                else:
+                    continue
+            else:
+                d = abs(slope - s)
+
+            if d == 0 or d <= dmax:
+                for p in slopes[s]:
+                    candidates.append(p)
+
+        # Find the contour points from the list of candidate points that
+        # closely fit the angle's linear function.
         # Only save points for which the distance to the expected point is
         # no more than the maximum gap. Save each point with a weight value,
         # which is used for clustering.
         weighted_points = []
-        for p in contour:
-            p = p[0]
+        for p in candidates:
             x = p[0] - center[0]
             y = p[1] - center[1]
             if math.isinf(slope):
@@ -286,7 +323,7 @@ def shape_360(contour, rotation=0, step=1, t=8):
                     w = 1 / (d+1)
                     weighted_points.append( (w, tuple(p)) )
 
-        assert len(weighted_points) != 0, "No intersections found"
+        assert len(weighted_points) > 0, "No intersections found for angle %d" % angle
 
         # Cluster the points.
         weighted_points = weighted_points_nearest(weighted_points, t)
@@ -500,7 +537,7 @@ def mask_from_contour(contour, shape):
     ``(height, width)``.
     """
     h, w = shape
-    m = np.zeros((h,w), dtype=np.uint8)
+    m = np.zeros(shape, dtype=np.uint8)
     for y in range(h):
         for x in range(w):
             d = cv2.pointPolygonTest(contour, (x,y), False)
