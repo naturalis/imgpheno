@@ -145,8 +145,9 @@ def draw_angle_shape(angle):
     global rotation, img, center, intersects
 
     # Draw the angle.
-    #line = ft.angled_line(center, angle, 100)
     line = ft.extreme_points(intersects[angle] + intersects[angle+180])
+    if line == None:
+        line = ft.angled_line(center, angle + rotation, 100)
     cv2.line(img, tuple(line[0]), tuple(line[1]), GREEN)
 
     # Draw main intersections.
