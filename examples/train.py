@@ -158,16 +158,19 @@ def train_data(images_path, conf_path, output_path):
     # Set the training data.
     training_data = common.TrainData(len(header_data), len(classes))
     fp = Fingerprint()
+    failed = []
     for im_class, files in images.items():
         for im_path in files:
             if fp.open(im_path, yml) == None:
-                logging.info("Failed to read %s. Skipping." % im_path)
+                logging.warning("Failed to read %s. Skipping." % im_path)
+                failed.append(im_path)
                 continue
 
             try:
                 data = fp.make()
             except:
-                logging.info("Fingerprint failed. Skipping.")
+                logging.warning("Fingerprint failed. Skipping.")
+                failed.append(im_path)
                 continue
 
             assert len(data) == len(header_data), "Data length mismatch"
@@ -189,6 +192,11 @@ def train_data(images_path, conf_path, output_path):
 
     out_file.close()
     logging.info("Training data written to %s" % output_path)
+
+    if len(failed) > 0:
+        logging.warning("Some files could not be processed:")
+        for path in failed:
+            logging.warning("- %s" % path)
 
 def train_ann(train_data_path, output_path, test_data_path=None, conf_path=None):
     for path in (train_data_path, test_data_path, conf_path):
