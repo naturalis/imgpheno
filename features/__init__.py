@@ -54,9 +54,12 @@ def split_by_mask(img, mask):
         raise ValueError("Mask must be binary")
 
     contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    for pointset in contours:
-        x,y,w,h = cv2.boundingRect(pointset)
-        yield img[y:y+h, x:x+w]
+    for contour in contours:
+        bin_mask = np.zeros(img.shape[:2], dtype=np.uint8)
+        cv2.drawContours(bin_mask, [contour], 0, 255, -1, 8, hierarchy, 0)
+        output = cv2.bitwise_and(img, img, mask=bin_mask)
+        x,y,w,h = cv2.boundingRect(contour)
+        yield output[y:y+h, x:x+w]
 
 def color_histograms(img, histsize=None, mask=None, colorspace=CS_BGR):
     """Convenience wrapper for :cv2:`calcHist`.
@@ -530,19 +533,23 @@ def get_major_defects(contour):
         major_defects.append( (distance, farthest_point) )
     return sorted(major_defects, reverse=True)
 
-def mask_from_contour(contour, shape):
-    """Returns a binary mask from a contour.
+def point_rectangle_test(rect, p):
+    """Performs a point-in-rectangle test.
 
-    The returned mask will have the shape of `shape`, a tuple of the format
-    ``(height, width)``.
+    The function determines whether the point is inside a rectangle, outside,
+    or lies on an edge. It returns positive (inside), negative (outside), or
+    zero (on an edge) value, correspondingly.
     """
-    h, w = shape
-    m = np.zeros(shape, dtype=np.uint8)
-    for y in range(h):
-        for x in range(w):
-            d = cv2.pointPolygonTest(contour, (x,y), False)
-            if d >= 0:
-                m.itemset((y,x), 1)
-    return m
+    if len(rect) != 4:
+        raise ValueError("Unknown shape for rectangle")
+    if len(p) != 2:
+        raise ValueError("Unknown shape for point")
+    x,y,w,h = rect
+    if x <= p[0] <= x+w and y <= p[1] <= y+h:
+        if p[0] in (x, x+w) or p[1] in (y, y+h):
+            return 0
+        return 1
+    else:
+        return -1
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import logging
 import os
 import sys
 
@@ -14,6 +15,8 @@ import numpy as np
 import features as ft
 
 def main():
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
+
     parser = argparse.ArgumentParser(description='Test image segmentation and splitting')
     parser.add_argument('files', metavar='FILE', nargs='+', help='Input images')
     parser.add_argument('-o', '--output', metavar='PATH', default=".", help='Path for output files.')
@@ -36,7 +39,7 @@ def split_image(path, args):
         sys.stderr.write("Failed to read %s. Skipping.\n" % path)
         return -1
 
-    sys.stderr.write("Processing %s...\n" % path)
+    logging.info("Processing %s ..." % path)
 
     # Resize the image if it is larger than the threshold.
     max_px = max(img.shape[:2])
@@ -44,18 +47,18 @@ def split_image(path, args):
         rf = float(args.maxdim) / max_px
         img = cv2.resize(img, None, fx=rf, fy=rf)
 
+    logging.info("Segmenting...")
+
     # Perform segmentation.
     mask = ft.segment(img, args.iters, args.margin)
 
     # Create a binary mask. Foreground is made white, background black.
     bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
 
-    # Merge the binary mask with the image.
-    img_masked = cv2.bitwise_and(img, img, mask=bin_mask)
-
     # Split the image into segments.
-    segments = split_by_mask(img_masked, bin_mask)
+    segments = ft.split_by_mask(img, bin_mask)
 
+    logging.info("Exporting segments...")
     for i, im in enumerate(segments):
         if im.shape[0] < args.mindim or im.shape[1] < args.mindim:
             continue
@@ -64,17 +67,10 @@ def split_image(path, args):
         name = os.path.splitext(name)
         out_path = "%s_%d%s" % (name[0], i, name[1])
         out_path = os.path.join(args.output, out_path)
+        logging.info("\t%s" % out_path)
         cv2.imwrite(out_path, im)
 
     return 0
-
-def split_by_mask(img, mask):
-    contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    for contour in contours:
-        bin_mask = ft.mask_from_contour(contour, img.shape[:2])
-        img_masked = cv2.bitwise_and(img, img, mask=bin_mask)
-        x,y,w,h = cv2.boundingRect(contour)
-        yield img_masked[y:y+h, x:x+w]
 
 if __name__ == "__main__":
     main()
