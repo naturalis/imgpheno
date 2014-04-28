@@ -41,7 +41,7 @@ def main():
     # Aprse arguments
     parser = argparse.ArgumentParser(description='Get the rough shape from the main object')
     parser.add_argument('path', metavar='PATH', help='Path to image folder')
-    parser.add_argument('--maxdim', metavar='N', type=float, default=500.0, help="Limit the maximum dimension for an input image. The input image is resized if width or height is larger than N. Default is 500.")
+    parser.add_argument('--maxdim', metavar='N', type=float, help="Limit the maximum dimension for an input image. The input image is resized if width or height is larger than N. Default is no limit.")
     parser.add_argument('--iters', metavar='N', type=int, default=5, help="The number of segmentation iterations. Default is 5.")
     parser.add_argument('--margin', metavar='N', type=int, default=1, help="The margin of the foreground rectangle from the edges. Default is 1.")
     args = parser.parse_args()
