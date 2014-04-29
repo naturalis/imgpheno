@@ -9,8 +9,8 @@ import cv2
 
 from context import features as ft
 
-IMAGE_SLIPPER = "data/slipper.jpg"
-IMAGES_ERYCINA = ("data/erycina.jpg", "data/erycina2.jpg")
+IMAGE_SLIPPER = "../examples/images/slipper.jpg"
+IMAGES_ERYCINA = ("../examples/images/erycina/1.jpg", "../examples/images/erycina/2.jpg")
 MAXDIM = 500
 
 class TestFeatures(unittest.TestCase):
