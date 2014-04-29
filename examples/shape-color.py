@@ -3,6 +3,9 @@
 
 """This program is a demonstration of feature extraction function shape:360.
 
+In this example the function is used to extract the colors for transects for
+given angles.
+
 The following key bindings are available:
   N - load next image
   P - load previous image
@@ -31,6 +34,7 @@ CYAN = (255,255,0)
 GREEN = (0,255,0)
 RED = (0,0,255)
 
+bin_mask = None
 img = None
 img_src = None
 rotation = 0
@@ -63,7 +67,7 @@ def main():
 
     # Create UI
     cv2.namedWindow('image')
-    cv2.createTrackbar('Angle', 'image', 0, 179, set_angle_shape)
+    cv2.createTrackbar('Angle', 'image', 0, 359, set_angle_shape)
 
     i = 0
     process_image(args, images[i])
@@ -96,7 +100,7 @@ def set_angle_shape(x):
     draw_angle_shape(x)
 
 def process_image(args, path):
-    global intersects, rotation, img, img_src, center
+    global bin_mask, intersects, rotation, img, img_src, center
 
     img = cv2.imread(path)
     if img == None or img.size == 0:
@@ -140,31 +144,30 @@ def draw_axis():
     # Redraw the image.
     img = img_src.copy()
 
-    # Draw the center
-    cv2.circle(img, tuple(center), 5, GREEN, -1)
-
-    # Draw x and y axis
-    cv2.line(img, (0, center[1]), (img.shape[1], center[1]), BLACK)
-    cv2.line(img, (center[0], 0), (center[0], img.shape[0]), BLACK)
-
     cv2.imshow('image', img)
 
 def draw_angle_shape(angle):
-    global rotation, img, center, intersects
+    global bin_mask, rotation, img, center, intersects
 
-    # Draw the angle.
-    line = ft.extreme_points(intersects[angle] + intersects[angle+180])
-    if line == None:
-        line = ft.angled_line(center, angle + rotation, 100)
-    cv2.line(img, tuple(line[0]), tuple(line[1]), GREEN)
+    # Get a line from the center to the outer intersection point.
+    line = None
+    if len(intersects[angle]) > 0:
+        line = ft.extreme_points([center] + intersects[angle])
+
+    # Create a mask for the line, where the line is foreground.
+    line_mask = np.zeros(img.shape[:2], dtype=np.uint8)
+    if line != None:
+        cv2.line(line_mask, tuple(line[0]), tuple(line[1]), 255, 1)
+
+    # Merge the binary mask with the image.
+    img_masked = cv2.bitwise_and(img, img, mask=bin_mask)
+    img_masked = cv2.bitwise_and(img, img_masked, mask=line_mask)
 
     # Draw main intersections.
     for x,y in intersects[angle]:
         cv2.circle(img, (x,y), 5, RED)
-    for x,y in intersects[angle+180]:
-        cv2.circle(img, (x,y), 5, BLUE)
 
-    cv2.imshow('image', img)
+    cv2.imshow('image', img_masked)
 
 def get_image_files(path):
     fl = []
