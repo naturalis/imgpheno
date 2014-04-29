@@ -149,6 +149,14 @@ def train_data(images_path, conf_path, output_path):
             header_data.append("MEAN.%d" % i)
             header_data.append("SD.%d" % i)
 
+    if 'shape_360_color' in yml.features:
+        n = 360 / getattr(yml.features.shape_360_color, 'step', 1) * 30
+        j = 0
+        for i in range(n):
+            if i % 30 == 0:
+                j += 1
+            header_data.append("360_COLOR.%d" % j)
+
     for i in range(len(classes)):
         header_out.append("OUT.%d" % (i+1,))
 
@@ -304,7 +312,8 @@ def test_ann(ann_path, test_data_path, output_path=None, conf_path=None, error=0
         class_f = get_classification(codewords, codeword, error)
         row.append(", ".join(class_f))
 
-        if class_f == class_e or (len(class_f) > 1 and class_f[0] == class_e[0]):
+        # Check if the first items of the classifications match.
+        if len(class_f) > 0 and class_f[0] == class_e[0]:
             row.append("+")
             correct += 1
         else:
@@ -485,6 +494,11 @@ class Fingerprint(object):
             data = self.get_shape_360()
             data_row.extend(data)
 
+        if 'shape_360_color' in self.params.features:
+            logging.info("- Running shape:360:color...")
+            data = self.get_shape_360_color()
+            data_row.extend(data)
+
         return data_row
 
     def get_color_histograms(self):
@@ -545,7 +559,7 @@ class Fingerprint(object):
         # the standard deviation for the distances.
         means = []
         sds = []
-        for angle in range(360):
+        for angle in range(0, 360, step):
             distances = []
             for p in intersects[angle]:
                 d = ft.point_dist(center, p)
@@ -571,6 +585,48 @@ class Fingerprint(object):
         sds = cv2.normalize(sds, None, -1, 1, cv2.NORM_MINMAX)
 
         return np.array( zip(means, sds) ).ravel()
+
+    def get_shape_360_color(self):
+        if self.bin_mask == None:
+            raise ValueError("Binary mask not set")
+
+
+        rotation = getattr(self.params.features.shape_360_color, 'rotation', None)
+        step = getattr(self.params.features.shape_360_color, 'step', 1)
+        t = getattr(self.params.features.shape_360_color, 't', 8)
+        img_masked = cv2.bitwise_and(self.img, self.img, mask=self.bin_mask)
+        contour = ft.get_largest_countour(self.bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
+        # If the rotation is not set, try to fit an ellipse on the contour to
+        # get the rotation angle.
+        if rotation == None:
+            box = cv2.fitEllipse(contour)
+            rotation = int(box[2])
+
+        # Get the shape.
+        intersects, center = ft.shape_360(contour, rotation, step, t)
+
+        # For each angle save the mean distance from center to contour and
+        # the standard deviation for the distances.
+        histograms = []
+        for angle in range(0, 360, step):
+            # Get a line from the center to the outer intersection point.
+            line = None
+            if len(intersects[angle]) > 0:
+                line = ft.extreme_points([center] + intersects[angle])
+
+            # Create a mask for the line, where the line is foreground.
+            line_mask = np.zeros(self.img.shape[:2], dtype=np.uint8)
+            if line != None:
+                cv2.line(line_mask, tuple(line[0]), tuple(line[1]), 255, 2)
+
+            # Create histogram from masked image.
+            hists = ft.color_histograms(img_masked, [10,10,10], line_mask, ft.CS_BGR)
+            for hist in hists:
+                hist = cv2.normalize(hist, None, -1, 1, cv2.NORM_MINMAX)
+                histograms.extend( hist.ravel() )
+
+        return histograms
 
 if __name__ == "__main__":
     main()

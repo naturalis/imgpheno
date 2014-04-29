@@ -5,7 +5,6 @@
 
 import collections
 import itertools
-import logging
 import math
 
 import numpy as np
@@ -326,6 +325,7 @@ def shape_360(contour, rotation=0, step=1, t=8):
                     w = 1 / (d+1)
                     weighted_points.append( (w, tuple(p)) )
 
+        #sys.stderr.write("%s -> %s\n" % (len(candidates), len(weighted_points)))
         assert len(weighted_points) > 0, "No intersections found for angle %d" % angle
 
         # Cluster the points.
