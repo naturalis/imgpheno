@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""This program is a demonstration of feature extraction function color_histograms.
+
+The histograms for the BGR color space are printed.
+"""
+
 import argparse
 import os
 import sys
@@ -13,9 +18,11 @@ import numpy as np
 
 import features as ft
 
-MAXDIM = 200.0
+MAXDIM = 500
 
 def main():
+    print __doc__
+
     parser = argparse.ArgumentParser(description='Get image color statistics')
     parser.add_argument('image', metavar='FILE', help='Input image')
     args = parser.parse_args()
@@ -30,13 +37,13 @@ def main():
     # Scale the image down if necessary.
     max_px = max(img.shape[:2])
     if max_px > MAXDIM:
-        rf = MAXDIM / max_px
+        rf = float(MAXDIM) / max_px
         img = cv2.resize(img, None, fx=rf, fy=rf)
 
     cs_str = "BGR"
-    hists = ft.hists(img, [10,10,10])
+    hists = ft.color_histograms(img, [10,10,10])
     for i, hist in enumerate(hists):
-        print "%s: n = %s" % (cs_str[i], len(hist))
+        print "%s: %s" % (cs_str[i], hist.astype(int).ravel())
 
     return 0
 
