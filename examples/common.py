@@ -136,7 +136,7 @@ class TrainANN(object):
         self.hidden_neurons = 8
         self.epochs = 500000
         self.iterations_between_reports = 1000
-        self.desired_error = 0.001
+        self.desired_error = 0.0001
         self.training_algorithm = libfann.TRAIN_INCREMENTAL
         self.train_data = None
         self.test_data = None

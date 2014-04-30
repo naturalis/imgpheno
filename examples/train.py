@@ -224,7 +224,7 @@ def train_ann(train_data_path, output_path, test_data_path=None, conf_path=None)
             ann_trainer.hidden_neurons = getattr(yml.ann, 'hidden_neurons', 8)
             ann_trainer.learning_rate = getattr(yml.ann, 'learning_rate', 0.7)
             ann_trainer.epochs = getattr(yml.ann, 'epochs', 500000)
-            ann_trainer.desired_error = getattr(yml.ann, 'error', 0.001)
+            ann_trainer.desired_error = getattr(yml.ann, 'error', 0.0001)
 
     train_data = common.TrainData()
     train_data.read_from_file(train_data_path)

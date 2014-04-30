@@ -30,7 +30,7 @@ ann:
     hidden_neurons: 8
     # Maximum number of epochs. Default is 500000
     epochs: 500000
-    # Desired error. Default is 0.001
+    # Desired error. Default is 0.0001
     error: 0.0001
     # Learning rate. Default is 0.7
     learning_rate: 0.7
