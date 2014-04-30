@@ -2,6 +2,3 @@
 *.pyc
 *.swp
 Session.vim
-
-examples/data_/
-examples/tmp/
