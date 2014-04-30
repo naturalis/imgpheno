@@ -56,6 +56,21 @@ class TestFeatures(unittest.TestCase):
         # Two flowers in image should produce two segments.
         self.assertEqual( len(list(segments)), 2 )
 
+    def test_color_histograms(self):
+        im_path = os.path.join(self.base_dir, IMAGE_SLIPPER)
+        img = cv2.imread(im_path)
+        if img == None or img.size == 0:
+            raise SystemError("Failed to read %s" % im_path)
+
+        hists = ft.color_histograms(img)
+
+        # Compare with values obtained with The GIMP.
+        self.assertEqual( hists[0][0], 40962 )
+        self.assertEqual( hists[0][42], 900 )
+        self.assertEqual( hists[1][42], 2303 )
+        self.assertEqual( hists[2][42], 1822 )
+        self.assertEqual( hists[2][255], 8466 )
+
     def test_shape_360(self):
         """Test the shape:360 feature.
 

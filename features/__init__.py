@@ -90,7 +90,7 @@ def color_histograms(img, histsize=None, mask=None, colorspace=CS_BGR):
     hists = []
     for ch in range(img.ndim):
         if histsize == None:
-            bins = abs(CS_RANGE[colorspace][ch][1] - CS_RANGE[colorspace][ch][0] - 1)
+            bins = abs(CS_RANGE[colorspace][ch][1] - CS_RANGE[colorspace][ch][0])
         else:
             bins = histsize[ch]
 
