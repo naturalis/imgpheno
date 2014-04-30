@@ -100,35 +100,6 @@ def color_histograms(img, histsize=None, mask=None, colorspace=CS_BGR):
 
     return hists
 
-def unrotate(src, dst, bin_mask):
-    """Unrotate an image using the binary mask.
-    """
-    # Get the center.
-    m = cv2.moments(bin_mask, True)
-    center = ( int(m['m10']/m['m00']) , int(m['m01']/m['m00']) )
-
-    # Calculate the overall shift.
-    outlines = simple_outline(bin_mask)
-    shift = 0
-    for left,right in outlines[1]:
-        shift += right - left
-
-    return shift
-
-    # TODO: Get the rotation in degrees.
-    # Compare west side and east side areas?
-    angle = None
-
-    # TODO: Rotate a contour to get the optimal angle.
-    #   For each point(x,y), multiply mat([x\\y\\1]) by rotation matrix and
-    #   convert the result back to point coordinates.
-
-    # TODO: Get rotation matrix.
-    affine_transform = cv2.getRotationMatrix2D(center, angle, scale)
-
-    # TODO: Rotate the image.
-    rotated = cv2.warpAffine(img, affine_transform, dsize)
-
 def get_largest_countour(img, mode, method):
     """Get the largest contour from a binary image.
 
