@@ -17,10 +17,29 @@ preprocess:
 
 # Features to be extracted from the images.
 features:
-    color_histograms: {BGR: 10, HSV: 10}
-    #shape_outline: {resolution: 15}
-    shape_360: {rotation: 0, step: 1, t: 8}
-    #shape_360_color: {rotation: 0, step: 1, t: 8}
+    color_histograms:
+        BGR: [10,10,10]
+        HSV: [10,10,10]
+    #shape_outline: {resolution: 50}
+    shape_360:
+        # Specify rotation if the objects are rotated (default is 0, no
+        # rotation). Set to FIT_ELLIPSE to automatically get the rotation for
+        # each image by ellipse fitting.
+        rotation: 0
+        # Step size for the 360 angles (default is 1).
+        step: 1
+        # Distance threshold in pixels for point clustering (default is 8).
+        t: 8
+        # The output functions control how the shape is returned. Multipple
+        # output functions can be specified.
+        output_functions:
+            # Returns the mean length + standard deviation of the vector from
+            # the object center to all outline intersections for each angle
+            # (default).
+            mean_sd: true
+            # Returns the color histogram of the vector from the object center
+            # at each angle, ignoring the pixels outside the object.
+            color_histograms: {BGR: [10,10,10]}
 
 # Parameters for training the artificial neural network.
 ann:

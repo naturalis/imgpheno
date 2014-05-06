@@ -54,7 +54,7 @@ def main():
     parser_ann.add_argument("--test-data", metavar="FILE", help="Path to tab separated file with test data.")
     parser_ann.add_argument("--conf", metavar="FILE", help="Path to a YAML file with ANN training parameters.")
     parser_ann.add_argument("--output", "-o", metavar="FILE", required=True, help="Output file name for the artificial neural network. Any existing file with same name will be overwritten.")
-    parser_ann.add_argument("data", metavar="FILE", help="Path to tab separated file with training data.")
+    parser_ann.add_argument("data", metavar="TRAIN_DATA", help="Path to tab separated file with training data.")
 
     # Create an argument parser for sub-command 'test-ann'.
     help_test_ann = """Test an artificial neural network. If `--output` is
@@ -67,7 +67,7 @@ def main():
     parser_test_ann.add_argument("--output", "-o", metavar="FILE", help="Output file name for the test results. Specifying this option will output a table with the classification result for each sample.")
     parser_test_ann.add_argument("--conf", metavar="FILE", help="Path to a YAML file with class names.")
     parser_test_ann.add_argument("--error", metavar="N", type=float, default=0.01, help="The maximum error for classification. Default is 0.01")
-    parser_test_ann.add_argument("data", metavar="FILE", help="Path to tab separated file containing test data.")
+    parser_test_ann.add_argument("data", metavar="TEST_DATA", help="Path to tab separated file containing test data.")
 
     # Create an argument parser for sub-command 'classify'.
     help_classify = """Classify an image. See orchids.yml for an example YAML
@@ -78,7 +78,7 @@ def main():
     parser_classify.add_argument("--ann", metavar="FILE", required=True, help="Path to a trained artificial neural network file.")
     parser_classify.add_argument("--conf", metavar="FILE", required=True, help="Path to a YAML file with class names.")
     parser_classify.add_argument("--error", metavar="N", type=float, default=0.01, help="The maximum error for classification. Default is 0.01")
-    parser_classify.add_argument("image", metavar="FILE", help="Path to image file to be classified.")
+    parser_classify.add_argument("image", metavar="IMAGE", help="Path to image file to be classified.")
 
     # Parse arguments.
     args = parser.parse_args()
@@ -98,6 +98,7 @@ def main():
     sys.exit()
 
 def train_data(images_path, conf_path, output_path):
+    """Generate training data."""
     for path in (images_path, conf_path):
         if not os.path.exists(path):
             sys.stderr.write("Cannot open %s (no such file or directory)\n" % path)
@@ -132,33 +133,36 @@ def train_data(images_path, conf_path, output_path):
     header_data = []
     header_out = []
 
-    if 'color_histograms' in yml.features:
-        for colorspace, bins in vars(yml.features.color_histograms).iteritems():
-            for ch, n in enumerate([bins] * len(colorspace)):
-                for i in range(n):
-                    header_data.append("%s.%d" % (colorspace[ch], i+1))
+    for feature, args in vars(yml.features).iteritems():
+        if feature == 'color_histograms':
+            for colorspace, bins in vars(args).iteritems():
+                for ch, n in enumerate(bins):
+                    for i in range(1, n+1):
+                        header_data.append("%s:%d" % (colorspace[ch], i))
 
-    if 'shape_outline' in yml.features:
-        n = 2 * getattr(yml.features.shape_outline, 'resolution', 15)
-        for i in range(n):
-            header_data.append("OL.%d" % (i+1,))
+        if feature == 'shape_outline':
+            n = 2 * getattr(args, 'resolution', 15)
+            for i in range(1, n+1):
+                header_data.append("OUTLINE.%d" % i)
 
-    if 'shape_360' in yml.features:
-        n = 360 / getattr(yml.features.shape_360, 'step', 1)
-        for i in range(n):
-            header_data.append("MEAN.%d" % i)
-            header_data.append("SD.%d" % i)
+        if feature == 'shape_360':
+            step = getattr(args, 'step', 1)
+            output_functions = getattr(args, 'output_functions', {'mean_sd': 1})
+            for f_name, f_args in vars(output_functions).iteritems():
+                if f_name == 'mean_sd':
+                    for i in range(0, 360, step):
+                        header_data.append("360:%d.MN" % i)
+                        header_data.append("360:%d.SD" % i)
 
-    if 'shape_360_color' in yml.features:
-        n = 360 / getattr(yml.features.shape_360_color, 'step', 1) * 30
-        j = 0
-        for i in range(n):
-            if i % 30 == 0:
-                j += 1
-            header_data.append("360_COLOR.%d" % j)
+                if f_name == 'color_histograms':
+                    for i in range(0, 360, step):
+                        for cs, bins in vars(f_args).iteritems():
+                            for j, color in enumerate(cs):
+                                for k in range(1, bins[j]+1):
+                                    header_data.append("360:%d.%s:%d" % (i,color,k))
 
     for i in range(len(classes)):
-        header_out.append("OUT.%d" % (i+1,))
+        header_out.append("OUT:%d" % i)
 
     # Write the header row.
     out_file.write( "%s\n" % "\t".join(header_primer + header_data + header_out) )
@@ -176,8 +180,9 @@ def train_data(images_path, conf_path, output_path):
 
             try:
                 data = fp.make()
-            except:
-                logging.warning("Fingerprint failed. Skipping.")
+            except ValueError as e:
+                logging.error("Fingerprint failed: %s" % e)
+                logging.warning("Skipping.")
                 failed.append(im_path)
                 continue
 
@@ -201,12 +206,14 @@ def train_data(images_path, conf_path, output_path):
     out_file.close()
     logging.info("Training data written to %s" % output_path)
 
+    # Print list of failed objects.
     if len(failed) > 0:
         logging.warning("Some files could not be processed:")
         for path in failed:
             logging.warning("- %s" % path)
 
 def train_ann(train_data_path, output_path, test_data_path=None, conf_path=None):
+    """Train an artificial neural network."""
     for path in (train_data_path, test_data_path, conf_path):
         if path and not os.path.exists(path):
             sys.stderr.write("Cannot open %s (no such file or directory)\n" % path)
@@ -244,6 +251,7 @@ def train_ann(train_data_path, output_path, test_data_path=None, conf_path=None)
         logging.info("Mean Square Error on test data: %f" % error)
 
 def test_ann(ann_path, test_data_path, output_path=None, conf_path=None, error=0.01):
+    """Test an artificial neural network."""
     for path in (ann_path, test_data_path, conf_path):
         if path and not os.path.exists(path):
             sys.stderr.write("Cannot open %s (no such file or directory)\n" % path)
@@ -329,6 +337,7 @@ def test_ann(ann_path, test_data_path, output_path=None, conf_path=None, error=0
     logging.info("Testing results written to %s" % output_path)
 
 def classify(image_path, ann_path, conf_path, error):
+    """Classify an image with a trained artificial neural network."""
     for path in (image_path, ann_path, conf_path):
         if path and not os.path.exists(path):
             sys.stderr.write("Cannot open %s (no such file or directory)\n" % path)
@@ -366,6 +375,7 @@ def classify(image_path, ann_path, conf_path, error):
 
 
 def get_image_files(path):
+    """Recursively obtain a list of image files from a path."""
     fl = []
     for item in os.listdir(path):
         im_path = os.path.join(path, item)
@@ -411,6 +421,7 @@ def open_yaml(path):
     return yml
 
 class Fingerprint(object):
+    """Generate numerical features from an image."""
 
     def __init__(self):
         self.path = None
@@ -477,156 +488,135 @@ class Fingerprint(object):
         data_row = []
 
         if not 'features' in self.params:
-            raise ValueError("Nothing to do. Features to extract not set.")
+            raise ValueError("Features to extract not set. Nothing to do.")
 
-        if 'color_histograms' in self.params.features:
-            logging.info("- Running color:histograms...")
-            data = self.get_color_histograms()
-            data_row.extend(data)
+        for feature, args in vars(self.params.features).iteritems():
+            if feature == 'color_histograms':
+                logging.info("- Running color:histograms...")
+                data = self.get_color_histograms(self.img, args, self.bin_mask)
+                data_row.extend(data)
 
-        if 'shape_outline' in self.params.features:
-            logging.info("- Running shape:outline...")
-            data = self.get_shape_outline()
-            data_row.extend(data)
+            elif feature == 'shape_outline':
+                logging.info("- Running shape:outline...")
+                data = self.get_shape_outline(args, self.bin_mask)
+                data_row.extend(data)
 
-        if 'shape_360' in self.params.features:
-            logging.info("- Running shape:360...")
-            data = self.get_shape_360()
-            data_row.extend(data)
-
-        if 'shape_360_color' in self.params.features:
-            logging.info("- Running shape:360:color...")
-            data = self.get_shape_360_color()
-            data_row.extend(data)
+            elif feature == 'shape_360':
+                logging.info("- Running shape:360...")
+                data = self.get_shape_360(args, self.bin_mask)
+                data_row.extend(data)
 
         return data_row
 
-    def get_color_histograms(self):
-        if self.bin_mask == None:
-            raise ValueError("Binary mask not set")
-
+    def get_color_histograms(self, src, args, bin_mask=None):
         histograms = []
-        for colorspace, bins in vars(self.params.features.color_histograms).iteritems():
-            bins = [int(bins)] * len(colorspace)
-
+        for colorspace, bins in vars(args).iteritems():
             if colorspace.lower() == "bgr":
                 colorspace = ft.CS_BGR
-                img = self.img
+                img = src
             elif colorspace.lower() == "hsv":
                 colorspace = ft.CS_HSV
-                img = cv2.cvtColor(self.img, cv2.COLOR_BGR2HSV)
+                img = cv2.cvtColor(src, cv2.COLOR_BGR2HSV)
             elif colorspace.lower() == "luv":
                 colorspace = ft.CS_LUV
-                img = cv2.cvtColor(self.img, cv2.COLOR_BGR2LUV)
+                img = cv2.cvtColor(src, cv2.COLOR_BGR2LUV)
             else:
-                raise ValueError("Unknown colorspace")
+                raise ValueError("Unknown colorspace '%s'" % colorspace)
 
-            hists = ft.color_histograms(img, bins, self.bin_mask, colorspace)
+            hists = ft.color_histograms(img, bins, bin_mask, colorspace)
 
             for hist in hists:
                 hist = cv2.normalize(hist, None, -1, 1, cv2.NORM_MINMAX)
                 histograms.extend( hist.ravel() )
         return histograms
 
-    def get_shape_outline(self):
+    def get_shape_outline(self, args, bin_mask):
         if self.bin_mask == None:
-            raise ValueError("Binary mask not set")
+            raise ValueError("Binary mask cannot be None")
 
-        resolution = getattr(self.params.features.shape_outline, 'resolution', 15)
+        resolution = getattr(args, 'resolution', 15)
 
-        outline = ft.shape_outline(self.bin_mask, resolution)
+        outline = ft.shape_outline(bin_mask, resolution)
         outline = cv2.normalize(outline, None, -1, 1, cv2.NORM_MINMAX)
         return outline
 
-    def get_shape_360(self):
+    def get_shape_360(self, args, bin_mask):
         if self.bin_mask == None:
-            raise ValueError("Binary mask not set")
+            raise ValueError("Binary mask cannot be None")
 
-        rotation = getattr(self.params.features.shape_360, 'rotation', None)
-        step = getattr(self.params.features.shape_360, 'step', 1)
-        t = getattr(self.params.features.shape_360, 't', 8)
-        contour = ft.get_largest_countour(self.bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        rotation = getattr(args, 'rotation', 0)
+        step = getattr(args, 'step', 1)
+        t = getattr(args, 't', 8)
+        output_functions = getattr(args, 'output_functions', {'mean_sd': True})
 
-        # If the rotation is not set, try to fit an ellipse on the contour to
-        # get the rotation angle.
-        if rotation == None:
+        # Get the largest contour from the binary mask.
+        contour = ft.get_largest_countour(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
+        # Set the rotation.
+        if rotation == 'FIT_ELLIPSE':
             box = cv2.fitEllipse(contour)
             rotation = int(box[2])
+        if not 0 <= rotation <= 180:
+            raise ValueError("Rotation must be an integer between 0 and 180, found %s" % rotation)
 
+        # Extract shape feature.
         intersects, center = ft.shape_360(contour, rotation, step, t)
 
-        # For each angle save the mean distance from center to contour and
-        # the standard deviation for the distances.
+        # Create a masked image.
+        if 'color_histograms' in output_functions:
+            img_masked = cv2.bitwise_and(self.img, self.img, mask=bin_mask)
+
+        # Run the output function for each angle.
         means = []
         sds = []
-        for angle in range(0, 360, step):
-            distances = []
-            for p in intersects[angle]:
-                d = ft.point_dist(center, p)
-                distances.append(d)
-
-            if len(distances) == 0:
-                mean = 0
-                sd = 0
-            else:
-                mean = np.mean(distances, dtype=np.float32)
-                if len(distances) > 1:
-                    sd = np.std(distances, ddof=1, dtype=np.float32)
-                else:
-                    sd = 0
-
-            means.append(mean)
-            sds.append(sd)
-
-        # Normalize the data.
-        means = np.array(means)
-        means = cv2.normalize(means, None, -1, 1, cv2.NORM_MINMAX)
-        sds = np.array(sds)
-        sds = cv2.normalize(sds, None, -1, 1, cv2.NORM_MINMAX)
-
-        return np.array( zip(means, sds) ).ravel()
-
-    def get_shape_360_color(self):
-        if self.bin_mask == None:
-            raise ValueError("Binary mask not set")
-
-
-        rotation = getattr(self.params.features.shape_360_color, 'rotation', None)
-        step = getattr(self.params.features.shape_360_color, 'step', 1)
-        t = getattr(self.params.features.shape_360_color, 't', 8)
-        img_masked = cv2.bitwise_and(self.img, self.img, mask=self.bin_mask)
-        contour = ft.get_largest_countour(self.bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-
-        # If the rotation is not set, try to fit an ellipse on the contour to
-        # get the rotation angle.
-        if rotation == None:
-            box = cv2.fitEllipse(contour)
-            rotation = int(box[2])
-
-        # Get the shape.
-        intersects, center = ft.shape_360(contour, rotation, step, t)
-
-        # For each angle save the mean distance from center to contour and
-        # the standard deviation for the distances.
         histograms = []
         for angle in range(0, 360, step):
-            # Get a line from the center to the outer intersection point.
-            line = None
-            if len(intersects[angle]) > 0:
-                line = ft.extreme_points([center] + intersects[angle])
+            for f_name, f_args in vars(output_functions).iteritems():
+                # Mean distance + standard deviation.
+                if f_name == 'mean_sd':
+                    distances = []
+                    for p in intersects[angle]:
+                        d = ft.point_dist(center, p)
+                        distances.append(d)
 
-            # Create a mask for the line, where the line is foreground.
-            line_mask = np.zeros(self.img.shape[:2], dtype=np.uint8)
-            if line != None:
-                cv2.line(line_mask, tuple(line[0]), tuple(line[1]), 255, 2)
+                    if len(distances) == 0:
+                        mean = 0
+                        sd = 0
+                    else:
+                        mean = np.mean(distances, dtype=np.float32)
+                        if len(distances) > 1:
+                            sd = np.std(distances, ddof=1, dtype=np.float32)
+                        else:
+                            sd = 0
 
-            # Create histogram from masked image.
-            hists = ft.color_histograms(img_masked, [10,10,10], line_mask, ft.CS_BGR)
-            for hist in hists:
-                hist = cv2.normalize(hist, None, -1, 1, cv2.NORM_MINMAX)
-                histograms.extend( hist.ravel() )
+                    means.append(mean)
+                    sds.append(sd)
 
-        return histograms
+                # Color histograms.
+                if f_name == 'color_histograms':
+                    # Get a line from the center to the outer intersection point.
+                    line = None
+                    if len(intersects[angle]) > 0:
+                        line = ft.extreme_points([center] + intersects[angle])
+
+                    # Create a mask for the line, where the line is foreground.
+                    line_mask = np.zeros(self.img.shape[:2], dtype=np.uint8)
+                    if line != None:
+                        cv2.line(line_mask, tuple(line[0]), tuple(line[1]), 255, 1)
+
+                    # Create histogram from masked + line masked image.
+                    hists = self.get_color_histograms(img_masked, f_args, line_mask)
+                    histograms.append(hists)
+
+        # Normalize results.
+        if 'mean_sd' in output_functions:
+            means = cv2.normalize(np.array(means), None, -1, 1, cv2.NORM_MINMAX)
+            sds = cv2.normalize(np.array(sds), None, -1, 1, cv2.NORM_MINMAX)
+
+        # Group the means+sds together.
+        means_sds = np.array(zip(means, sds)).flatten()
+
+        return np.append(means_sds, histograms)
 
 if __name__ == "__main__":
     main()

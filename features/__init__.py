@@ -22,6 +22,30 @@ CS_RANGE = {
     CS_LUV: ([0, 101], [-134, 221], [-140, 123])
 }
 
+def moments_get_center(m):
+    """Returns the center of mass from moments.
+
+    Sources:
+    1. Simon Xinmeng Liao. Image analysis by moments. (1993).
+    """
+    return np.array( (int(m['m10']/m['m00']), int(m['m01']/m['m00'])) )
+
+def moments_get_skew(m):
+    """Returns the skew from moments."""
+    return m['mu11']/m['mu02']
+
+def moments_get_orientation(m):
+    """Returns the orientation in radians from moments.
+
+    Theta is the angle of the principal axis nearest to the X axis
+    and is in the range -pi/4 <= theta <= pi/4.
+
+    Sources:
+    1. Simon Xinmeng Liao. Image analysis by moments. (1993).
+    """
+    theta = 0.5 * math.atan( (2 * m['mu11']) / (m['mu20'] - m['mu02']) )
+    return theta
+
 def segment(img, iters=5, margin=5):
     """Segment image into foreground and background pixels.
 
@@ -67,11 +91,9 @@ def color_histograms(img, histsize=None, mask=None, colorspace=CS_BGR):
 
     The input image colorspace must be set with `colorspace`. Value can be
     one of the following:
-        * ``CS_BGR`` for the BGR color space.
+        * ``CS_BGR`` for the BGR color space (default).
         * ``CS_HSV`` for the HSV color space.
         * ``CS_LUV`` for the CIE 1976 (L\*, u\*, v\*) color space.
-
-    Default value is ``CS_BGR``.
 
     .. note::
 
@@ -82,10 +104,12 @@ def color_histograms(img, histsize=None, mask=None, colorspace=CS_BGR):
 
         These ranges are also set in ``CS_RANGE``.
     """
-    if histsize and len(histsize) != img.ndim:
-        raise ValueError("Argument `histsize` must have `img.ndim` elements.")
     if colorspace not in CS_RANGE:
-        raise ValueError("Unknown colorspace.")
+        raise ValueError("Unknown colorspace %s." % colorspace)
+    if histsize and len(histsize) != len(CS_RANGE[colorspace]):
+        raise ValueError( "Expected 'histsize' to be of length %d, found %d" % (len(CS_RANGE[colorspace]), len(histsize)) )
+    if img.ndim != len(CS_RANGE[colorspace]):
+        raise ValueError("Image has %d dimensions, expected %d" (img.ndim, len(CS_RANGE[colorspace])))
 
     hists = []
     for ch in range(img.ndim):
@@ -404,22 +428,6 @@ def shortest_distance_to_contour_point(point, contour):
             mind = d
             minp = p
     return (minp, mind)
-
-def moments_get_center(m):
-    """Returns the center from moments."""
-    return np.array( (int(m['m10']/m['m00']), int(m['m01']/m['m00'])) )
-
-def moments_get_skew(m):
-    """Returns the skew from moments."""
-    return m['mu11']/m['mu02']
-
-def moments_get_orientation(m):
-    """Returns the orientation in degrees from moments.
-
-    Source: http://stackoverflow.com/a/14720823/466781
-    """
-    theta = 0.5 * math.atan( (2 * m['mu11']) / (m['mu20'] - m['mu02']) )
-    return math.degrees(theta)
 
 def deskew(img, dsize, mask=None):
     """Moment-based image deskew.
