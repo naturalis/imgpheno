@@ -217,6 +217,8 @@ def shape_outline(img, resolution=10):
 def shape_360(contour, rotation=0, step=1, t=8):
     """Returns a shape feature from a contour.
 
+    `contour` must be a contour as returned by :meth:`cv2.findContours` with
+    method ``cv2.CHAIN_APPROX_NONE`` so that all contour points are present.
     The rotation in degrees of the contour can be set with `rotation`, which
     must be a value between 0 and 179 inclusive. A rotation above 90 degrees
     is interpreted as a rotation to the left (e.g. a rotation of 120 is
