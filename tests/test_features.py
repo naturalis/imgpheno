@@ -10,8 +10,34 @@ import cv2
 from context import features as ft
 
 IMAGE_SLIPPER = "../examples/images/slipper.jpg"
-IMAGES_ERYCINA = ("../examples/images/erycina/1.jpg", "../examples/images/erycina/2.jpg")
+IMAGES_ERYCINA = ("../examples/images/erycina/1.jpg",
+    "../examples/images/erycina/2.jpg")
+IMAGES_RECTANGLE = ("../examples/images/rectangle/10.png",
+    "../examples/images/rectangle/45.png",
+    "../examples/images/rectangle/90.png")
 MAXDIM = 500
+
+def error(a, p, f):
+    """Calculate the error between actual and predicted values."""
+    if isinstance(a, (float,int,long,complex)) and \
+            isinstance(p, (float,int,long,complex)):
+        return f(a, p)
+    elif isinstance(a, (list,tuple,np.ndarray)) and \
+            isinstance(p, (list,tuple,np.ndarray)):
+        if len(a) == len(p):
+            e = 0
+            for i in range(len(a)):
+                e += f(a[i], p[i])
+            return float(e) / len(a)
+    raise ValueError("Expected numerals or equal length lists thereof, got %s and %s" % (a, p))
+
+def mse(a, p):
+    """Calculate the mean square error."""
+    return float(abs(p-a) ** 2)
+
+def mape(a, p):
+    """Calculate the mean absolute percentage error."""
+    return float(abs(p-a) / a)
 
 class TestFeatures(unittest.TestCase):
     """Unit tests for the features module."""
@@ -136,18 +162,31 @@ class TestFeatures(unittest.TestCase):
             shape.append([means, sds])
 
         # Check the medium square error for the means.
-        diff_means = 0
-        for i in range(360):
-            diff_means += abs(shape[0][0][i] - shape[1][0][i])
-        mse = (diff_means / 360) ** 2
-        self.assertLess(mse, 0.05)
+        self.assertLess(error(shape[0][0].ravel(), shape[1][0].ravel(), mse), 0.05)
 
         # Check the medium square error for the standard deviations.
-        diff_sds = 0
-        for i in range(360):
-            diff_sds += abs(shape[0][1][i] - shape[1][1][i])
-        mse = (diff_sds / 360) ** 2
-        self.assertLess(mse, 0.05)
+        self.assertLess(error(shape[0][1].ravel(), shape[1][1].ravel(), mse), 0.05)
+
+    def test_contour_properties(self):
+        """Test measuring of contour properties."""
+        size_exp = (300, 100)
+
+        for i, path in enumerate(IMAGES_RECTANGLE):
+            im_path = os.path.join(self.base_dir, path)
+            img = cv2.imread(im_path)
+            if img == None or img.size == 0:
+                raise SystemError("Failed to read %s" % im_path)
+
+            # Perform segmentation.
+            mask = ft.segment(img, 1, 1)
+            bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
+
+            # Get contours and properties.
+            contours, hierarchy = cv2.findContours(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            props = ft.contour_properties(contours, 'Area')
+
+            # Check that the properties have the expected values.
+            self.assertLess( error(props[0]['Area'], (size_exp[0] * size_exp[1]), mape),  0.05)
 
 if __name__ == '__main__':
     unittest.main()
