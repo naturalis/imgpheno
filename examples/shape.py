@@ -75,11 +75,13 @@ def main():
             if i >= len(images):
                 i = 0
             process_image(args, images[i])
+            cv2.setTrackbarPos('Angle', 'image', 0)
         elif k == ord('p'):
             i -= 1
             if i < 0:
                 i = len(images) - 1
             process_image(args, images[i])
+            cv2.setTrackbarPos('Angle', 'image', 0)
         elif k == ord('q'):
             break
 

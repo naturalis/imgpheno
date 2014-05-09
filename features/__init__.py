@@ -145,6 +145,150 @@ def get_largest_countour(img, mode, method):
             largest = contour
     return largest
 
+def contour_properties(contours, properties='basic'):
+    """Measure properties of contours.
+
+    `contours` is a list of contours, or an array of contours as returned by
+    :meth:`cv2.findContours`. `properties` can be a comma-separated list of
+    strings, a list containing strings, the single string 'all', or the string
+    'basic'. If `properties` is the string 'all', all the shape measurements
+    are computed. If `properties` is not specified or if it is the string
+    'basic', only 'Area', 'Centroid', and 'BoundingBox' are computed. You can
+    calculate the following properties:
+
+    * ``Area``: The numer of pixels in the contour.
+    * ``BoundingBox``: The smallest rectangle containing the contour.
+    * ``Centroid``: The center mass of the contour. This is computed by fitting an ellipse.
+    * ``ConvexArea``: The number of pixels in the convex hull.
+    * ``ConvexHull``: The smalles convex polygon that can contain the contour.
+    * ``Eccentricity``: Scalar that specifies the eccentricity of the ellipse
+      that fits (in a least-squares sense) the contour. The eccentricity is the
+      ratio of the distance between the center and either focus of the ellipse
+      and its major axis length. The value is between 0 and 1.
+    * ``Ellipse``: The ellipse that fits (in a least-squares sense) the
+      contour. The ellipse is returned in the format (Centroid,
+      (MinorAxisLength, MajorAxisLength), Orientation). The ellipse can only
+      be computed if the contour consists of at least 5 points.
+    * ``EquivDiameter``: Scalar that specifies the diameter of a circle with
+      the same area as the contour. Computed as sqrt(4*Area/pi).
+    * ``Extent``: Scalar that specifies the ratio of the contour area to the
+      bounding box area.
+    * ``Extrema``: 4-by-2 matrix that specifies the extrema points in the
+      contour. Each row of the matrix contains the x- and y-coordinates of one
+      of the points. The format of the vector is [top right bottom left].
+    * ``MinorAxisLength``: Scalar specifying the length (in pixels) of the
+      minor axis of the ellipse.
+    * ``MajorAxisLength``: Scalar specifying the length (in pixels) of the
+      major axis of the ellipse
+    * ``Orientation``: Scalar specifying the angle (in degrees ranging from 0
+      to 179 degrees) between the y-axis and the major axis of the ellipse in
+      clockwise direction.
+    * ``Perimeter``: Scalar specifying the distance around the boundary of the
+      contour.
+    * ``Solidity``: Scalar specifying the proportion of the pixels in the
+      convex hull that are also in the region. Computed as Area/ConvexArea.
+
+    If a property could not be calculated, its value will be None.
+
+    See also: http://www.mathworks.com/help/images/ref/regionprops.html
+    """
+    if len(contours) == 0:
+        raise ValueError("List of contours not set")
+    known_names = ('Area', 'BoundingBox', 'Centroid', 'ConvexArea',
+        'ConvexHull', 'Eccentricity', 'Ellipse', 'EquivDiameter', 'Extent',
+        'Extrema', 'MinorAxisLength', 'MajorAxisLength', 'Orientation',
+        'Perimeter', 'Solidity')
+    if isinstance(properties, str):
+        if properties == 'basic':
+            properties = ('Area', 'Centroid', 'BoundingBox')
+        elif properties == 'all':
+            properties = known_names
+        else:
+            properties = properties.split(',')
+    if len(properties) == 0:
+        raise ValueError("List of properties not set")
+    if not all(p in known_names for p in properties):
+        raise ValueError("Unknown property '%s'" % p)
+
+    stats = []
+    for cnt in contours:
+        # Call cv2.fitEllipse if needed.
+        match = ('Centroid', 'Eccentricity', 'Ellipse', 'MinorAxisLength',
+        'MajorAxisLength', 'Orientation')
+        if any(p in match for p in properties):
+            try:
+                ellipse = cv2.fitEllipse(cnt)
+                centroid, (b, a), angle = ellipse
+                x,y = centroid
+                centroid = (int(x), int(y))
+            except:
+                ellipse = centroid = b = a = angle = None
+
+        # Call cv2.convexHull if needed.
+        match = ('ConvexHull', 'ConvexArea', 'Solidity')
+        if any(p in match for p in properties):
+            hull = cv2.convexHull(cnt)
+
+        # Call cv2.contourArea if needed.
+        match = ('Area', 'EquivDiameter', 'Extent')
+        if any(p in match for p in properties):
+            area = cv2.contourArea(cnt)
+            if not area > 0:
+                continue
+
+        # Call cv2.minAreaRect if needed.
+        match = ('BoundingBox', 'Extent')
+        if any(p in match for p in properties):
+            bounding_rect = cv2.minAreaRect(cnt)
+
+        props = {}
+        for name in properties:
+            val = None
+            if name == 'Area':
+                val = area
+            elif name == 'BoundingBox':
+                val = bounding_rect
+            elif name == 'Centroid':
+                val = centroid
+            elif name == 'ConvexArea':
+                val = cv2.contourArea(hull)
+            elif name == 'ConvexHull':
+                val = hull
+            elif name == 'Eccentricity':
+                if ellipse == None:
+                    val = None
+                else:
+                    f = math.sqrt(math.pow(a, 2) - math.pow(b, 2))
+                    val = float(f) / a
+            elif name == 'Ellipse':
+                val = ellipse
+            elif name == 'EquivDiameter':
+                val = math.sqrt(4 * area / math.pi)
+            elif name == 'Extent':
+                (x,y), (w,h), _ = bounding_rect
+                rect_area = w * h
+                val = float(area) / rect_area
+            elif name == 'Extrema':
+                topmost     = tuple(cnt[cnt[:,:,1].argmin()][0])
+                bottommost  = tuple(cnt[cnt[:,:,1].argmax()][0])
+                leftmost    = tuple(cnt[cnt[:,:,0].argmin()][0])
+                rightmost   = tuple(cnt[cnt[:,:,0].argmax()][0])
+                val = (topmost, rightmost, bottommost, leftmost)
+            elif name == 'MinorAxisLength':
+                val = b
+            elif name == 'MajorAxisLength':
+                val = a
+            elif name == 'Orientation':
+                val = angle
+            elif name == 'Perimeter':
+                val = cv2.arcLength(cnt, closed=True)
+            elif name == 'Solidity':
+                val = float(area) / cv2.contourArea(hull)
+
+            props[name] = val
+        stats.append(props)
+    return stats
+
 def shape_outline(img, resolution=10):
     """Returns an outline feature from a binary image.
 
@@ -240,8 +384,8 @@ def shape_360(contour, rotation=0, step=1, t=8):
         raise ValueError("The rotation must be between 0 and 179 inclusive, found %d" % rotation)
 
     # Get the center.
-    center, _ = cv2.minEnclosingCircle(contour)
-    center = np.int32(center)
+    props = contour_properties([contour], 'Centroid')
+    center = props[0]['Centroid']
 
     # If the rotation is more than 90 degrees, assume the object is rotated to
     # the left.
@@ -344,36 +488,33 @@ def shape_360(contour, rotation=0, step=1, t=8):
         intersects[angle+180] = []
         for p in points:
             side = side_of_line(division_line, p)
-            if side < 0:
+            if side > 0:
                 intersects[angle+a].append(p)
-            elif side > 0:
+            elif side < 0:
                 intersects[angle+b].append(p)
             else:
                 assert side != 0, "A point cannot be on the division line"
 
     return (intersects, center)
 
-def angled_line(center, angle, radius):
+def angled_line(origin, angle, radius, clockwise=True):
     """Returns an angled line.
 
-    The `angle` must be in degrees. The line's center is set at `center` and
-    the line length is twice the `radius`. The line's angle is based on the
-    vertical axis.
+    Returns a line with origin `origin` and an angle of `angle` degrees between
+    the vertical axis in clockwise direction, counterclockwise if `clockwise`
+    is False. The line extends `radius` pixels in either direction from the
+    origin. The line is returned as a 2-by-2 array that specifies the extreme
+    points of the line.
     """
-    if not isinstance(center, np.ndarray):
-        center = np.array(center)
-
-    if angle > 90:
-        angle = 180 - angle
-    else:
+    if not isinstance(origin, np.ndarray):
+        origin = np.array(origin)
+    if clockwise:
         angle *= -1
     angle = math.radians(angle)
-
     x = int(math.sin(angle) * radius)
     y = int(math.cos(angle) * radius)
     end = np.array((x, y))
-
-    return (tuple(center - end), tuple(center + end))
+    return (tuple(origin - end), tuple(origin + end))
 
 def point_dist(p1, p2):
     """Return the distance between two points.

@@ -138,8 +138,8 @@ def shape_360_v2(contour, rotation=0, step=1, t=8):
         raise ValueError("The rotation must be between 0 and 179 inclusive, found %d" % rotation)
 
     # Get the center.
-    center, _ = cv2.minEnclosingCircle(contour)
-    center = np.int32(center)
+    props = ft.contour_properties([contour], 'Centroid')
+    center = props[0]['Centroid']
 
     # If the rotation is more than 90 degrees, assume the object is rotated to
     # the left.
