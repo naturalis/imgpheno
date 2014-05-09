@@ -1,0 +1,2 @@
+OpenCV>=2.4.8
+PyYAML
