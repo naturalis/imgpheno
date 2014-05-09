@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import math
 import os
 import unittest
 
@@ -10,15 +11,21 @@ import cv2
 from context import features as ft
 
 IMAGE_SLIPPER = "../examples/images/slipper.jpg"
-IMAGES_ERYCINA = ("../examples/images/erycina/1.jpg",
-    "../examples/images/erycina/2.jpg")
-IMAGES_RECTANGLE = ("../examples/images/rectangle/10.png",
-    "../examples/images/rectangle/45.png",
-    "../examples/images/rectangle/90.png")
+IMAGES_ERYCINA = (
+    "../examples/images/erycina/1.jpg",
+    "../examples/images/erycina/2.jpg"
+    )
+IMAGES_RECTANGLE = (
+    "../examples/images/rectangle/100.png",
+    "../examples/images/rectangle/45.png"
+    )
 MAXDIM = 500
 
 def error(a, p, f):
-    """Calculate the error between actual and predicted values."""
+    """Calculate the error between actual `a` and predicted `p` values.
+
+    The error is calculated with function `f`.
+    """
     if isinstance(a, (float,int,long,complex)) and \
             isinstance(p, (float,int,long,complex)):
         return f(a, p)
@@ -29,15 +36,15 @@ def error(a, p, f):
             for i in range(len(a)):
                 e += f(a[i], p[i])
             return float(e) / len(a)
-    raise ValueError("Expected numerals or equal length lists thereof, got %s and %s" % (a, p))
+    raise ValueError("Expected numerals or equal length lists thereof")
 
 def mse(a, p):
     """Calculate the mean square error."""
-    return float(abs(p-a) ** 2)
+    return abs(p-a) ** 2
 
 def mape(a, p):
     """Calculate the mean absolute percentage error."""
-    return float(abs(p-a) / a)
+    return abs(p-a) / a
 
 class TestFeatures(unittest.TestCase):
     """Unit tests for the features module."""
@@ -104,6 +111,8 @@ class TestFeatures(unittest.TestCase):
         image. Then the medium square error between the two extracted shapes is
         calculated and checked.
         """
+        max_error = 0.05
+
         shape = []
         for i, path in enumerate(IMAGES_ERYCINA):
             im_path = os.path.join(self.base_dir, path)
@@ -162,14 +171,15 @@ class TestFeatures(unittest.TestCase):
             shape.append([means, sds])
 
         # Check the medium square error for the means.
-        self.assertLess(error(shape[0][0].ravel(), shape[1][0].ravel(), mse), 0.05)
+        self.assertLess(error(shape[0][0].ravel(), shape[1][0].ravel(), mse), max_error)
 
         # Check the medium square error for the standard deviations.
-        self.assertLess(error(shape[0][1].ravel(), shape[1][1].ravel(), mse), 0.05)
+        self.assertLess(error(shape[0][1].ravel(), shape[1][1].ravel(), mse), max_error)
 
     def test_contour_properties(self):
         """Test measuring of contour properties."""
         size_exp = (300, 100)
+        angle_exp = (100, 45)
 
         for i, path in enumerate(IMAGES_RECTANGLE):
             im_path = os.path.join(self.base_dir, path)
@@ -183,10 +193,17 @@ class TestFeatures(unittest.TestCase):
 
             # Get contours and properties.
             contours, hierarchy = cv2.findContours(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            props = ft.contour_properties(contours, 'Area')
+            props = ft.contour_properties(contours, 'all')
 
-            # Check that the properties have the expected values.
-            self.assertLess( error(props[0]['Area'], (size_exp[0] * size_exp[1]), mape),  0.05)
+            # Check if the properties have the expected values.
+            self.assertLess( error(props[0]['Area'],            (size_exp[0] * size_exp[1]), mape), 0.06)
+            self.assertLess( error(props[0]['Perimeter'],       (size_exp[0]*2 + size_exp[1]*2), mape), 0.06)
+            self.assertLess( error(props[0]['Centroid'][0],     (500/2.0), mape), 0.01)
+            self.assertLess( error(props[0]['Centroid'][1],     (300/2.0), mape), 0.01)
+            self.assertLess( error(props[0]['Orientation'],     angle_exp[i], mape), 0.01)
+            self.assertLess( error(props[0]['EquivDiameter'],   math.sqrt(4 * size_exp[0] * size_exp[1] / math.pi), mape), 0.01)
+            self.assertLess( error(props[0]['Extent'],          1, mse), 0.01)
+            self.assertLess( error(props[0]['Solidity'],        1, mse), 0.01)
 
 if __name__ == '__main__':
     unittest.main()

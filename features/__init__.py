@@ -216,12 +216,12 @@ def contour_properties(contours, properties='basic'):
         match = ('Centroid', 'Eccentricity', 'Ellipse', 'MinorAxisLength',
         'MajorAxisLength', 'Orientation')
         if any(p in match for p in properties):
-            try:
+            if len(cnt) >= 5:
                 ellipse = cv2.fitEllipse(cnt)
                 centroid, (b, a), angle = ellipse
                 x,y = centroid
                 centroid = (int(x), int(y))
-            except:
+            else:
                 ellipse = centroid = b = a = angle = None
 
         # Call cv2.convexHull if needed.
