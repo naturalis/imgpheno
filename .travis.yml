@@ -1,16 +1,13 @@
 language: python
+
 python:
   - "2.7"
-script: make test
 
 compiler:
   - gcc
 
-before_install:
-  - sudo apt-get update
-
 install:
-  - sudo apt-get install python-dev python-numpy python-yaml
+  - sudo apt-get install python-dev python-numpy
 
 before_script:
   - git clone https://github.com/Itseez/opencv.git
@@ -25,3 +22,5 @@ before_script:
   - export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/site-packages/
 #  - ln -s opencv/build/lib/cv2.so
 #  - ln -s opencv/build/lib/cv.py
+
+script: make test
