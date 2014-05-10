@@ -22,4 +22,6 @@ before_script:
   - make -j8
   - sudo make install
   - cd ../../
+  - export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/site-packages/
 #  - ln -s opencv/build/lib/cv2.so
+#  - ln -s opencv/build/lib/cv.py
