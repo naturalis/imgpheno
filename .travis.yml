@@ -18,8 +18,8 @@ before_script:
   - git checkout 2.4.8.2
   - mkdir build
   - cd build
-  - cmake ..
+  - cmake -DCMAKE_INSTALL_PREFIX=/usr ..
   - make -j8
   - sudo make install
   - cd ../../
-  - ln -s opencv/build/lib/cv2.so
+#  - ln -s opencv/build/lib/cv2.so
