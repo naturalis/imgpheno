@@ -22,3 +22,4 @@ before_script:
   - make -j8
   - sudo make install
   - cd ../../
+  - ln -s opencv/build/lib/cv2.so
