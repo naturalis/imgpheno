@@ -1,9 +1,9 @@
-[![Build Status](https://travis-ci.org/naturalis/feature-extraction.svg?branch=master)](https://travis-ci.org/naturalis/feature-extraction)
-
 # Image Feature Extraction
 
 This is the README file for a Python module for extracting features from
 digital images.
+
+[![Build Status](https://travis-ci.org/naturalis/feature-extraction.svg?branch=master)](https://travis-ci.org/naturalis/feature-extraction)
 
 ## Requirements
 
