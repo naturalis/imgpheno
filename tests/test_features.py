@@ -32,10 +32,10 @@ def error(a, p, f):
     elif isinstance(a, (list,tuple,np.ndarray)) and \
             isinstance(p, (list,tuple,np.ndarray)):
         if len(a) == len(p):
-            e = 0
+            e = 0.0
             for i in range(len(a)):
                 e += f(a[i], p[i])
-            return float(e) / len(a)
+            return e / len(a)
     raise ValueError("Expected numerals or equal length lists thereof")
 
 def mse(a, p):
@@ -146,7 +146,7 @@ class TestFeatures(unittest.TestCase):
             # the standard deviation for the distances.
             means = []
             sds = []
-            for angle in range(360):
+            for angle in range(0, 360):
                 distances = []
                 for p in intersects[angle]:
                     d = ft.point_dist(center, p)
@@ -178,7 +178,11 @@ class TestFeatures(unittest.TestCase):
 
     def test_contour_properties(self):
         """Test measuring of contour properties."""
-        size_exp = (300, 100)
+
+        # Object width and height.
+        w, h = (300, 100)
+
+        # Object angle for each image.
         angle_exp = (100, 45)
 
         for i, path in enumerate(IMAGES_RECTANGLE):
@@ -196,12 +200,12 @@ class TestFeatures(unittest.TestCase):
             props = ft.contour_properties(contours, 'all')
 
             # Check if the properties have the expected values.
-            self.assertLess( error(props[0]['Area'],            (size_exp[0] * size_exp[1]), mape), 0.06)
-            self.assertLess( error(props[0]['Perimeter'],       (size_exp[0]*2 + size_exp[1]*2), mape), 0.06)
+            self.assertLess( error(props[0]['Area'],            (w * h), mape), 0.06)
+            self.assertLess( error(props[0]['Perimeter'],       (w*2 + h*2), mape), 0.06)
             self.assertLess( error(props[0]['Centroid'][0],     (500/2.0), mape), 0.01)
             self.assertLess( error(props[0]['Centroid'][1],     (300/2.0), mape), 0.01)
             self.assertLess( error(props[0]['Orientation'],     angle_exp[i], mape), 0.01)
-            self.assertLess( error(props[0]['EquivDiameter'],   math.sqrt(4 * size_exp[0] * size_exp[1] / math.pi), mape), 0.01)
+            self.assertLess( error(props[0]['EquivDiameter'],   np.sqrt(4 * w * h / np.pi), mape), 0.01)
             self.assertLess( error(props[0]['Extent'],          1, mse), 0.01)
             self.assertLess( error(props[0]['Solidity'],        1, mse), 0.01)
 
