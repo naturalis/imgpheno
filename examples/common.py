@@ -10,6 +10,15 @@ import cv2
 import numpy as np
 from pyfann import libfann
 
+COLOR = {
+    'black':    (0,0,0),
+    'gray':     (105,105,105),
+    'blue':     (255,0,0),
+    'cyan':     (255,255,0),
+    'green':    (0,255,0),
+    'red':      (0,0,255)
+}
+
 class DictObject(argparse.Namespace):
     def __init__(self, d):
         for a, b in d.iteritems():

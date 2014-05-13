@@ -295,6 +295,8 @@ def shape_outline(img, resolution=10):
     Returns a single array where the first `resolution` elements represent
     the outline along the horizontal axis, and the last `resolution` elements
     represent the outline along the vertical axis.
+
+    Returns None when the function failed to get the outline.
     """
     if len(img.shape) != 2:
         raise ValueError("Input image must be binary")
@@ -311,52 +313,38 @@ def shape_outline(img, resolution=10):
     pointset = contour[:,0]
 
     # Traverse contour left to right.
-    outline_hor = []
-    for i in range(im_w):
-        if i % im_w/resolution:
-            continue
-
-        # Get all the points where X or Y is equal to `x`
-        x = i + im_x
-        matches = np.where(pointset == x)
-
-        # Save only the Y values for points where X equals `x`
-        yindex = matches[0][np.where(matches[1] == 0)]
+    hor = []
+    step = float(im_w) / (resolution - 1)
+    for i in range(resolution):
+        # Get the Y values for column X.
+        x = int(im_x + (step * i))
+        if x == im_x+im_w:
+            x -= 1
+        yindex = np.where(pointset[:,0] == x)
         values = pointset[:,1][yindex]
 
         # Save the extremes, which describe the outer shape.
-        outline_hor.append( (min(values), max(values)) )
+        hor.append( (min(values) - im_y, max(values) - im_y) )
 
-    assert len(outline_hor) == resolution, "Number of shape elements must be equal to the resolution"
+    assert len(hor) == resolution, "Number of shape elements (%d) must be equal to the resolution (%d)" % (len(hor), resolution)
 
     # Traverse contour top to bottom.
-    outline_ver = []
-    for i in range(im_h):
-        if i % im_h/resolution:
-            continue
-
-        # Get all the points where X or Y is equal to `y`
-        y = i + im_y
-        matches = np.where(pointset == y)
-
-        # Save only the X values for points where Y equals `y`
-        xindex = matches[0][np.where(matches[1] == 1)]
+    ver = []
+    step = float(im_h) / (resolution - 1)
+    for i in range(resolution):
+        # Get the X values for row Y.
+        y = int(im_y + (step * i))
+        if y == im_y+im_h:
+            y -= 1
+        xindex = np.where(pointset[:,1] == y)
         values = pointset[:,0][xindex]
 
         # Save the extremes, which describe the outer shape.
-        outline_ver.append( (min(values), max(values)) )
+        ver.append( (min(values) - im_x, max(values) - im_x) )
 
-    assert len(outline_ver) == resolution, "Number of shape elements must be equal to the resolution"
+    assert len(ver) == resolution, "Number of shape elements (%d) must be equal to the resolution (%d)" % (len(ver), resolution)
 
-    outline = []
-    for n,s in outline_hor:
-        v = (s-n)*1.0
-        outline.append(v)
-    for w,e in outline_ver:
-        v = (e-w)*1.0
-        outline.append(v)
-
-    return np.array(outline)
+    return (hor, ver)
 
 def shape_360(contour, rotation=0, step=1, t=8):
     """Returns a shape feature from a contour.

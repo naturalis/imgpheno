@@ -39,12 +39,7 @@ intersects = None
 def main():
     print __doc__
 
-    if sys.flags.debug:
-        # Print debug messages if the -d flag is set for the Python interpreter.
-        logging.basicConfig(level=logging.DEBUG, format='%(levelname)s %(message)s')
-    else:
-        # Otherwise just show log messages of type INFO.
-        logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
 
     # Aprse arguments
     parser = argparse.ArgumentParser(description='Get the rough shape from the main object')
