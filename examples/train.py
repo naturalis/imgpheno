@@ -550,7 +550,7 @@ class Fingerprint(object):
         output_functions = getattr(args, 'output_functions', {'mean_sd': True})
 
         # Get the largest contour from the binary mask.
-        contour = ft.get_largest_countour(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        contour = ft.get_largest_contour(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
         # Set the rotation.
         if rotation == 'FIT_ELLIPSE':

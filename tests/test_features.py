@@ -133,7 +133,7 @@ class TestFeatures(unittest.TestCase):
             bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
 
             # Obtain contours (all points) from the mask.
-            contour = ft.get_largest_countour(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+            contour = ft.get_largest_contour(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
             # Fit an ellipse on the contour to get the rotation angle.
             box = cv2.fitEllipse(contour)

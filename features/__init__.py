@@ -124,7 +124,7 @@ def color_histograms(img, histsize=None, mask=None, colorspace=CS_BGR):
 
     return hists
 
-def get_largest_countour(img, mode, method):
+def get_largest_contour(img, mode, method):
     """Get the largest contour from a binary image.
 
     It is a simple wrapper for ref:`cv2.findContours`.
@@ -300,7 +300,7 @@ def shape_outline(img, resolution=10):
         raise ValueError("Input image must be binary")
 
     # Obtain contours (all points) from the mask.
-    contour = get_largest_countour(img.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    contour = get_largest_contour(img.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     if contour == None:
         return
 

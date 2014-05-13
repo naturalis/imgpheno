@@ -53,7 +53,7 @@ def main():
     bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
 
     # Create a binary mask for the largest contour.
-    contour = ft.get_largest_countour(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contour = ft.get_largest_contour(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     bin_mask2 = ft.mask_from_contour(contour, bin_mask.shape)
 
     # Merge the binary mask with the image.

@@ -275,7 +275,7 @@ if __name__ == "__main__":
 
     mask = ft.segment(img, 5, 1)
     bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
-    contour = ft.get_largest_countour(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    contour = ft.get_largest_contour(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
     t = timeit.Timer("test1(contour)", "from __main__ import test1, contour")
     print "shape_360_v1: %f seconds" % (t.timeit(runs) / runs)
