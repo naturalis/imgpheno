@@ -23,8 +23,7 @@ from common import COLOR
 
 img = None
 img_src = None
-outline_hor = None
-outline_ver = None
+outline = None
 box = None
 res = None
 
@@ -41,13 +40,13 @@ def main():
     parser.add_argument('--maxdim', metavar='N', type=float, help="Limit the maximum dimension for an input image. The input image is resized if width or height is larger than N. Default is no limit.")
     parser.add_argument('--iters', metavar='N', type=int, default=5, help="The number of segmentation iterations. Default is 5.")
     parser.add_argument('--margin', metavar='N', type=int, default=1, help="The margin of the foreground rectangle from the edges. Default is 1.")
-    parser.add_argument('--res', metavar='N', type=int, default=20, help="The resolution for the outline feature. Default is 20.")
+    parser.add_argument('-k', metavar='N', type=int, default=20, help="The resolution for the outline feature. Default is 20.")
     args = parser.parse_args()
-    res = args.res
+    res = args.k
 
     # Create UI
     cv2.namedWindow('image')
-    cv2.createTrackbar('Position', 'image', 0, args.res-1, set_position)
+    cv2.createTrackbar('Position', 'image', 0, args.k-1, set_position)
 
     process_image(args, args.path)
     while True:
@@ -59,13 +58,13 @@ def main():
     return 0
 
 def set_position(x):
-    global img, outline_hor, outline_ver, res
+    global img, outline, res
     if img == None:
         return
-    draw_outline(x, outline_hor, outline_ver, res)
+    draw_outline(x, outline, res)
 
 def process_image(args, path):
-    global img, img_src, outline_hor, outline_ver, box
+    global img, img_src, outline, box
 
     img = cv2.imread(path)
     if img == None or img.size == 0:
@@ -95,34 +94,22 @@ def process_image(args, path):
 
     # Get the outline.
     logging.info("- Obtaining shape...")
-    outline_hor, outline_ver = ft.shape_outline(bin_mask, args.res)
+    outline = ft.shape_outline(contour, args.k)
 
     # And draw it.
     logging.info("- Done")
-    draw_outline(0, outline_hor, outline_ver, args.res)
+    draw_outline(0, outline, args.k)
 
-def draw_outline(i, hor, ver, res):
+def draw_outline(i, outline, res):
     global img, img_src, box
 
     img = img_src.copy()
     im_x, im_y, im_w, im_h = box
 
     # Calculate the points for the horizontal outline.
-    step = float(im_w) / (res - 1)
-    x = int((i * step) + im_x)
-    y1, y2 = hor[i]
-    p1 = (x, im_y+y1)
-    p2 = (x, im_y+y2)
-
-    # Draw the points.
-    cv2.circle(img, p1, 5, COLOR['red'])
-    cv2.circle(img, p2, 5, COLOR['red'])
-    cv2.line(img, p1, p2, COLOR['red'])
-
-    # Calculate the points for the vertical outline.
     step = float(im_h) / (res - 1)
     y = int((i * step) + im_y)
-    x1, x2 = ver[i]
+    x1, x2 = outline[i][0]
     p1 = (im_x+x1, y)
     p2 = (im_x+x2, y)
 
@@ -130,6 +117,18 @@ def draw_outline(i, hor, ver, res):
     cv2.circle(img, p1, 5, COLOR['green'])
     cv2.circle(img, p2, 5, COLOR['green'])
     cv2.line(img, p1, p2, COLOR['green'])
+
+    # Calculate the points for the vertical outline.
+    step = float(im_w) / (res - 1)
+    x = int((i * step) + im_x)
+    y1, y2 = outline[i][1]
+    p1 = (x, im_y+y1)
+    p2 = (x, im_y+y2)
+
+    # Draw the points.
+    cv2.circle(img, p1, 5, COLOR['red'])
+    cv2.circle(img, p2, 5, COLOR['red'])
+    cv2.line(img, p1, p2, COLOR['red'])
 
     cv2.imshow('image', img)
 

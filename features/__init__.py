@@ -289,62 +289,57 @@ def contour_properties(contours, properties='basic'):
         stats.append(props)
     return stats
 
-def shape_outline(img, resolution=10):
-    """Returns an outline feature from a binary image.
+def shape_outline(contour, k=10):
+    """Returns a shape outline feature from a contour.
 
-    Returns a single array where the first `resolution` elements represent
-    the outline along the horizontal axis, and the last `resolution` elements
-    represent the outline along the vertical axis.
+    The contour shape is measured on `k` points on both X and Y axis, with
+    equal distance between each point.
 
-    Returns None when the function failed to get the outline.
+    Returns a `k` by 2 array. The first column represents the outline along
+    the horizontal axis, and the second column the outline along the
+    vertical axis. Each tuple in a column contains the minimum and maximum
+    value for the shape along that axis.
+
+    `k` must be at least 3, and no more than the contour's bounding box
+    width or height.
+
+    Returns None when the function fails to get the outline.
     """
-    if len(img.shape) != 2:
-        raise ValueError("Input image must be binary")
-
-    # Obtain contours (all points) from the mask.
-    contour = get_largest_contour(img.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    if contour == None:
-        return
-
-    # Get bounding rectange of the largest contour.
     im_x, im_y, im_w, im_h = cv2.boundingRect(contour)
+    if k < 3 or k > im_w or k > im_h:
+        raise ValueError("Illegal value for `k`")
 
-    # Get the pointset from the contour.
     pointset = contour[:,0]
-
-    # Traverse contour left to right.
-    hor = []
-    step = float(im_w) / (resolution - 1)
-    for i in range(resolution):
-        # Get the Y values for column X.
-        x = int(im_x + (step * i))
-        if x == im_x+im_w:
-            x -= 1
-        yindex = np.where(pointset[:,0] == x)
-        values = pointset[:,1][yindex]
-
-        # Save the extremes, which describe the outer shape.
-        hor.append( (min(values) - im_y, max(values) - im_y) )
-
-    assert len(hor) == resolution, "Number of shape elements (%d) must be equal to the resolution (%d)" % (len(hor), resolution)
-
-    # Traverse contour top to bottom.
-    ver = []
-    step = float(im_h) / (resolution - 1)
-    for i in range(resolution):
-        # Get the X values for row Y.
-        y = int(im_y + (step * i))
-        if y == im_y+im_h:
+    outline = ([], [])
+    step_x = float(im_w) / (k - 1)
+    step_y = float(im_h) / (k - 1)
+    for i in range(k):
+        # Set the X and Y value for this position.
+        y = int(im_y + (step_y * i))
+        if y == im_y + im_h:
             y -= 1
-        xindex = np.where(pointset[:,1] == y)
-        values = pointset[:,0][xindex]
+        x = int(im_x + (step_x * i))
+        if x == im_x + im_w:
+            x -= 1
 
-        # Save the extremes, which describe the outer shape.
-        ver.append( (min(values) - im_x, max(values) - im_x) )
+        # Get the X values for row Y.
+        idx = np.where(pointset[:,1] == y)
+        values = pointset[:,0][idx]
+        # Save the extreme values.
+        outline[0].append( (min(values) - im_x, max(values) - im_x) )
 
-    assert len(ver) == resolution, "Number of shape elements (%d) must be equal to the resolution (%d)" % (len(ver), resolution)
+        # Get the Y values for column X.
+        idx = np.where(pointset[:,0] == x)
+        values = pointset[:,1][idx]
+        # Save the extreme values.
+        outline[1].append( (min(values) - im_y, max(values) - im_y) )
 
-    return (hor, ver)
+    assert len(outline[0]) == k, "Number of shape elements (%d) doesn't" \
+        "match the value for k (%d)" % (len(outline[0]), k)
+    assert len(outline[1]) == k, "Number of shape elements (%d) doesn't" \
+        "match the value for k (%d)" % (len(outline[1]), k)
+
+    return zip(*outline)
 
 def shape_360(contour, rotation=0, step=1, t=8):
     """Returns a shape feature from a contour.

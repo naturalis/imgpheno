@@ -123,13 +123,16 @@ class TestFeatures(unittest.TestCase):
         mask = ft.segment(img, 1, 1)
         bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
 
+        # Obtain contours (all points) from the mask.
+        contour = ft.get_largest_contour(bin_mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
         # Get the outline.
-        outline = ft.shape_outline(bin_mask, resolution)
+        outline = ft.shape_outline(contour, resolution)
 
         # Compare values with the object shape.
         for i in range(resolution):
-            delta_y = outline[0][i][1] - outline[0][i][0]
-            delta_x = outline[1][i][1] - outline[1][i][0]
+            delta_x = outline[i][0][0] - outline[i][0][1]
+            delta_y = outline[i][1][0] - outline[i][1][1]
             self.assertLess( error(delta_y, h, mape), 0.0001 )
             self.assertLess( error(delta_x, w, mape), 0.0001 )
 
