@@ -17,7 +17,8 @@ IMAGES_ERYCINA = (
     )
 IMAGES_RECTANGLE = (
     "../examples/images/rectangle/100.png",
-    "../examples/images/rectangle/45.png"
+    "../examples/images/rectangle/45.png",
+    "../examples/images/rectangle/90.png"
     )
 MAXDIM = 500
 
@@ -90,6 +91,7 @@ class TestFeatures(unittest.TestCase):
         self.assertEqual( len(list(segments)), 2 )
 
     def test_color_histograms(self):
+        """Test color histograms."""
         im_path = os.path.join(self.base_dir, IMAGE_SLIPPER)
         img = cv2.imread(im_path)
         if img == None or img.size == 0:
@@ -103,6 +105,33 @@ class TestFeatures(unittest.TestCase):
         self.assertEqual( hists[1][42], 2303 )
         self.assertEqual( hists[2][42], 1822 )
         self.assertEqual( hists[2][255], 8466 )
+
+    def test_shape_outline(self):
+        """Test the shape:outline feature."""
+        path = IMAGES_RECTANGLE[2]
+        resolution = 20
+
+        # Object width and height.
+        w, h = (300, 100)
+
+        im_path = os.path.join(self.base_dir, path)
+        img = cv2.imread(im_path)
+        if img == None or img.size == 0:
+            raise SystemError("Failed to read %s" % im_path)
+
+        # Perform segmentation.
+        mask = ft.segment(img, 1, 1)
+        bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
+
+        # Get the outline.
+        outline = ft.shape_outline(bin_mask, resolution)
+
+        # Compare values with the object shape.
+        for i in range(resolution):
+            delta_y = outline[0][i][1] - outline[0][i][0]
+            delta_x = outline[1][i][1] - outline[1][i][0]
+            self.assertLess( error(delta_y, h, mape), 0.0001 )
+            self.assertLess( error(delta_x, w, mape), 0.0001 )
 
     def test_shape_360(self):
         """Test the shape:360 feature.
@@ -185,7 +214,7 @@ class TestFeatures(unittest.TestCase):
         # Object angle for each image.
         angle_exp = (100, 45)
 
-        for i, path in enumerate(IMAGES_RECTANGLE):
+        for i, path in enumerate(IMAGES_RECTANGLE[:2]):
             im_path = os.path.join(self.base_dir, path)
             img = cv2.imread(im_path)
             if img == None or img.size == 0:
