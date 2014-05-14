@@ -38,7 +38,7 @@ class TrainData(object):
         self.output = []
         self.counter = 0
 
-    def read_from_file(self, path, ignore=["ID"], output_prefix="OUT"):
+    def read_from_file(self, path, ignore=["ID"], output_prefix="OUT:"):
         fh = open(path, 'r')
         reader = csv.reader(fh, delimiter="\t")
 

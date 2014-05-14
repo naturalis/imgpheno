@@ -141,9 +141,10 @@ def train_data(images_path, conf_path, output_path):
                         header_data.append("%s:%d" % (colorspace[ch], i))
 
         if feature == 'shape_outline':
-            n = 2 * getattr(args, 'resolution', 15)
+            n = getattr(args, 'k', 15)
             for i in range(1, n+1):
-                header_data.append("OUTLINE.%d" % i)
+                header_data.append("OUTLINE:%d.X" % i)
+                header_data.append("OUTLINE:%d.Y" % i)
 
         if feature == 'shape_360':
             step = getattr(args, 'step', 1)
@@ -162,7 +163,7 @@ def train_data(images_path, conf_path, output_path):
                                     header_data.append("360:%d.%s:%d" % (i,color,k))
 
     for i in range(len(classes)):
-        header_out.append("OUT:%d" % i)
+        header_out.append("OUT:%d" % (i+1))
 
     # Write the header row.
     out_file.write( "%s\n" % "\t".join(header_primer + header_data + header_out) )
@@ -534,11 +535,27 @@ class Fingerprint(object):
         if self.bin_mask == None:
             raise ValueError("Binary mask cannot be None")
 
-        resolution = getattr(args, 'resolution', 15)
+        k = getattr(args, 'k', 15)
 
-        outline = ft.shape_outline(bin_mask, resolution)
-        outline = cv2.normalize(outline, None, -1, 1, cv2.NORM_MINMAX)
-        return outline
+        # Obtain contours (all points) from the mask.
+        contour = ft.get_largest_contour(bin_mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
+        # Get the outline.
+        outline = ft.shape_outline(contour, k)
+
+        # Compute the delta's for the horizontal and vertical point pairs.
+        shape = []
+        for x, y in outline:
+            delta_x = x[0] - x[1]
+            delta_y = y[0] - y[1]
+            shape.append(delta_x)
+            shape.append(delta_y)
+
+        # Normalize results.
+        shape = np.array(shape, dtype=np.float32)
+        shape = cv2.normalize(shape, None, -1, 1, cv2.NORM_MINMAX)
+
+        return shape.ravel()
 
     def get_shape_360(self, args, bin_mask):
         if self.bin_mask == None:

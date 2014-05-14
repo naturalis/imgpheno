@@ -1,4 +1,6 @@
 ---
+# This is an example parameters file for train.py
+
 # Preprocessing steps to perform on images before features are extracted.
 preprocess:
     # Limit the maximum dimension for an input image (optional). The input
@@ -17,10 +19,19 @@ preprocess:
 
 # Features to be extracted from the images.
 features:
+    # Describes the color frequencies.
     color_histograms:
+        # Specify which color spaces and the bin size of each color channel.
+        # Supported color spaces are BGR, HSV, and LUV.
         BGR: [10,10,10]
         HSV: [10,10,10]
-    #shape_outline: {resolution: 50}
+
+    # Describes the shape outline.
+    shape_outline:
+        # The shape is measured on `k` points on both X and Y axis.
+        k: 15
+
+    # Shape of the object.
     shape_360:
         # Specify rotation if the objects are rotated (default is 0, no
         # rotation). Set to FIT_ELLIPSE to automatically get the rotation for

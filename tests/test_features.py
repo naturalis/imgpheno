@@ -109,7 +109,7 @@ class TestFeatures(unittest.TestCase):
     def test_shape_outline(self):
         """Test the shape:outline feature."""
         path = IMAGES_RECTANGLE[2]
-        resolution = 20
+        k = 20
 
         # Object width and height.
         w, h = (300, 100)
@@ -127,12 +127,15 @@ class TestFeatures(unittest.TestCase):
         contour = ft.get_largest_contour(bin_mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
         # Get the outline.
-        outline = ft.shape_outline(contour, resolution)
+        outline = ft.shape_outline(contour, k)
 
-        # Compare values with the object shape.
-        for i in range(resolution):
-            delta_x = outline[i][0][0] - outline[i][0][1]
-            delta_y = outline[i][1][0] - outline[i][1][1]
+        # Assert the length of the return value.
+        self.assertEqual( len(outline), k )
+
+        # Assert the shape values.
+        for x, y in outline:
+            delta_x = x[0] - x[1]
+            delta_y = y[0] - y[1]
             self.assertLess( error(delta_y, h, mape), 0.0001 )
             self.assertLess( error(delta_x, w, mape), 0.0001 )
 
