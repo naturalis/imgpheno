@@ -341,7 +341,11 @@ def test_ann(ann_path, test_data_path, output_path=None, conf_path=None, error=0
         row.append(class_e[0])
 
         codeword = ann.run(input)
-        class_f = get_classification(codewords, codeword, error)
+        try:
+            class_f = get_classification(codewords, codeword, error)
+        except ValueError as e:
+            logging.error("Classification failed: %s" % e)
+            return 1
         row.append(", ".join(class_f))
 
         # Check if the first items of the classifications match.
@@ -392,7 +396,11 @@ def classify(image_path, ann_path, conf_path, error):
     codewords = get_codewords(yml.classes)
 
     # Get the classification.
-    classification = get_classification(codewords, codeword, error)
+    try:
+        classification = get_classification(codewords, codeword, error)
+    except ValueError as e:
+        logging.error("Failed to classify the image: %s" % e)
+        return 1
 
     logging.info("Codeword: %s" % codeword)
     logging.info("Classification: %s" % ", ".join(classification))
