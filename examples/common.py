@@ -38,7 +38,14 @@ class TrainData(object):
         self.output = []
         self.counter = 0
 
-    def read_from_file(self, path, ignore=["ID"], output_prefix="OUT:"):
+    def read_from_file(self, path, dependent_prefix="OUT:"):
+        """Reads training data from file.
+
+        Data is loaded from TSV file `path`. File must have a header row,
+        and columns with a name starting with `dependent_prefix` are used as
+        classification columns. Optionally, sample labels can be stored in
+        a column with name "ID". All remaining columns are used as predictors.
+        """
         fh = open(path, 'r')
         reader = csv.reader(fh, delimiter="\t")
 
@@ -48,11 +55,9 @@ class TrainData(object):
         output_start = None
         label_idx = None
         for i, field in enumerate(header):
-            if field in ignore:
-                if field == "ID":
-                    label_idx = i
-                continue
-            if field.startswith(output_prefix):
+            if field == "ID":
+                label_idx = i
+            elif field.startswith(dependent_prefix):
                 if output_start == None:
                     output_start = i
                 self.num_output += 1
@@ -61,9 +66,12 @@ class TrainData(object):
                     input_start = i
                 self.num_input += 1
 
-        if self.num_input < 1 or self.num_output < 1:
+        if self.num_input == 0:
             fh.close()
-            raise ValueError("Incorrect format")
+            raise ValueError("No input columns found in training data.")
+        if self.num_output  == 0:
+            fh.close()
+            raise ValueError("No output columns found in training data.")
 
         input_end = input_start + self.num_input
         output_end = output_start + self.num_output

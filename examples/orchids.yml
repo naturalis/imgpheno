@@ -1,6 +1,12 @@
 ---
 # This is an example parameters file for train.py
 
+# Describe training data format.
+data:
+    # Prefix of classification columns. When generating training data, this
+    # prefix is extended with a number.
+    dependent_prefix: "OUT:"
+
 # Preprocessing steps to perform on images before features are extracted.
 preprocess:
     # Limit the maximum dimension for an input image (optional). The input
@@ -47,7 +53,7 @@ features:
             # Returns the mean length + standard deviation of the vector from
             # the object center to all outline intersections for each angle
             # (default).
-            mean_sd: true
+            mean_sd: {}
             # Returns the color histogram of the vector from the object center
             # at each angle, ignoring the pixels outside the object.
             color_histograms: {BGR: [10,10,10]}
@@ -58,10 +64,10 @@ ann:
     hidden_layers: 1
     # Number of hidden neurons per hidden layer. Default is 8
     hidden_neurons: 8
-    # Maximum number of epochs. Default is 500000
-    epochs: 500000
-    # Desired error. Default is 0.0001
-    error: 0.0001
+    # Maximum number of epochs. Default is 100000
+    epochs: 100000
+    # Desired error. Default is 0.00001
+    error: 0.00001
     # Learning rate. Default is 0.7
     learning_rate: 0.7
     # Connection rate. Default is 1, a fully connected network.

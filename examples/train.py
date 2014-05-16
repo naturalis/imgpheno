@@ -53,6 +53,8 @@ def main():
         description=help_ann)
     parser_ann.add_argument("--test-data", metavar="FILE", help="Path to tab separated file with test data.")
     parser_ann.add_argument("--conf", metavar="FILE", help="Path to a YAML file with ANN training parameters.")
+    parser_ann.add_argument("--epochs", metavar="N", type=float, help="Maximum number of epochs. Overwrites value in --conf.")
+    parser_ann.add_argument("--error", metavar="N", type=float, help="Desired mean square error on training data. Overwrites value in --conf.")
     parser_ann.add_argument("--output", "-o", metavar="FILE", required=True, help="Output file name for the artificial neural network. Any existing file with same name will be overwritten.")
     parser_ann.add_argument("data", metavar="TRAIN_DATA", help="Path to tab separated file with training data.")
 
@@ -66,7 +68,7 @@ def main():
     parser_test_ann.add_argument("--ann", metavar="FILE", required=True, help="A trained artificial neural network.")
     parser_test_ann.add_argument("--output", "-o", metavar="FILE", help="Output file name for the test results. Specifying this option will output a table with the classification result for each sample.")
     parser_test_ann.add_argument("--conf", metavar="FILE", help="Path to a YAML file with class names.")
-    parser_test_ann.add_argument("--error", metavar="N", type=float, default=0.01, help="The maximum error for classification. Default is 0.01")
+    parser_test_ann.add_argument("--error", metavar="N", type=float, default=0.01, help="The maximum mean square error for classification. Default is 0.01")
     parser_test_ann.add_argument("data", metavar="TEST_DATA", help="Path to tab separated file containing test data.")
 
     # Create an argument parser for sub-command 'classify'.
@@ -86,10 +88,10 @@ def main():
     if sys.argv[1] == 'data':
         train_data(args.images, args.conf, args.output)
     elif sys.argv[1] == 'ann':
-        train_ann(args.data, args.output, args.test_data, args.conf)
+        train_ann(args.data, args.output, args.test_data, args.conf, args)
     elif sys.argv[1] == 'test-ann':
         if args.output and not args.conf:
-            sys.stderr.write("Option '--conf' must be set when '--output' is set.\n")
+            logging.error("Option `--conf` must be set when `--output` is set.")
             sys.exit()
         test_ann(args.ann, args.data, args.output, args.conf, args.error)
     elif sys.argv[1] == 'classify':
@@ -101,7 +103,7 @@ def train_data(images_path, conf_path, output_path):
     """Generate training data."""
     for path in (images_path, conf_path):
         if not os.path.exists(path):
-            sys.stderr.write("Cannot open %s (no such file or directory)\n" % path)
+            logging.error("Cannot open %s (no such file or directory)" % path)
             return 1
 
     yml = open_yaml(conf_path)
@@ -111,7 +113,7 @@ def train_data(images_path, conf_path, output_path):
     if 'preprocess' in yml and 'segmentation' in yml.preprocess:
         path = getattr(yml.preprocess.segmentation, 'output_folder', None)
         if path and not os.path.exists(path):
-            sys.stderr.write("Cannot open %s (no such file or directory)\n" % path)
+            logging.error("Cannot open %s (no such file or directory)" % path)
             return 1
 
     out_file = open(output_path, 'w')
@@ -162,8 +164,12 @@ def train_data(images_path, conf_path, output_path):
                                 for k in range(1, bins[j]+1):
                                     header_data.append("360:%d.%s:%d" % (i,color,k))
 
-    for i in range(len(classes)):
-        header_out.append("OUT:%d" % (i+1))
+    # Write classification columns.
+    dependent_prefix = "OUT:"
+    if 'data' in yml:
+        dependent_prefix = getattr(yml.data, 'dependent_prefix', dependent_prefix)
+    for i in range(1, len(classes)+1):
+        header_out.append("%s%d" % (dependent_prefix, i))
 
     # Write the header row.
     out_file.write( "%s\n" % "\t".join(header_primer + header_data + header_out) )
@@ -213,11 +219,11 @@ def train_data(images_path, conf_path, output_path):
         for path in failed:
             logging.warning("- %s" % path)
 
-def train_ann(train_data_path, output_path, test_data_path=None, conf_path=None):
+def train_ann(train_data_path, output_path, test_data_path=None, conf_path=None, args=None):
     """Train an artificial neural network."""
     for path in (train_data_path, test_data_path, conf_path):
         if path and not os.path.exists(path):
-            sys.stderr.write("Cannot open %s (no such file or directory)\n" % path)
+            logging.error("Cannot open %s (no such file or directory)" % path)
             return 1
 
     ann_trainer = common.TrainANN()
@@ -231,11 +237,23 @@ def train_ann(train_data_path, output_path, test_data_path=None, conf_path=None)
             ann_trainer.hidden_layers = getattr(yml.ann, 'hidden_layers', 1)
             ann_trainer.hidden_neurons = getattr(yml.ann, 'hidden_neurons', 8)
             ann_trainer.learning_rate = getattr(yml.ann, 'learning_rate', 0.7)
-            ann_trainer.epochs = getattr(yml.ann, 'epochs', 500000)
-            ann_trainer.desired_error = getattr(yml.ann, 'error', 0.0001)
+            ann_trainer.epochs = getattr(yml.ann, 'epochs', 100000)
+            ann_trainer.desired_error = getattr(yml.ann, 'error', 0.00001)
+
+    # These arguments overwrite parameters in the YAML file.
+    if args:
+        if args.epochs != None:
+            ann_trainer.epochs = args.epochs
+        if args.error != None:
+            ann_trainer.desired_error = args.error
+
+    # Get the prefix for the classification columns.
+    dependent_prefix = "OUT:"
+    if 'data' in yml:
+        dependent_prefix = getattr(yml.data, 'dependent_prefix', dependent_prefix)
 
     train_data = common.TrainData()
-    train_data.read_from_file(train_data_path)
+    train_data.read_from_file(train_data_path, dependent_prefix)
 
     ann = ann_trainer.train(train_data)
     ann.save(output_path)
@@ -247,7 +265,7 @@ def train_ann(train_data_path, output_path, test_data_path=None, conf_path=None)
 
     if test_data_path:
         test_data = common.TrainData()
-        test_data.read_from_file(test_data_path)
+        test_data.read_from_file(test_data_path, dependent_prefix)
         error = ann_trainer.test(test_data)
         logging.info("Mean Square Error on test data: %f" % error)
 
@@ -255,7 +273,7 @@ def test_ann(ann_path, test_data_path, output_path=None, conf_path=None, error=0
     """Test an artificial neural network."""
     for path in (ann_path, test_data_path, conf_path):
         if path and not os.path.exists(path):
-            sys.stderr.write("Cannot open %s (no such file or directory)\n" % path)
+            logging.error("Cannot open %s (no such file or directory)" % path)
             return 1
 
     if output_path and not conf_path:
@@ -266,17 +284,22 @@ def test_ann(ann_path, test_data_path, output_path=None, conf_path=None, error=0
         if not yml:
             return 1
         if 'classes' not in yml:
-            sys.stderr.write("Classes are not set in the YAML file. Missing object 'classes'.\n")
+            logging.error("Classes are not set in the YAML file. Missing object 'classes'.")
             return 1
+
+    # Get the prefix for the classification columns.
+    dependent_prefix = "OUT:"
+    if 'data' in yml:
+        dependent_prefix = getattr(yml.data, 'dependent_prefix', dependent_prefix)
 
     ann = libfann.neural_net()
     ann.create_from_file(ann_path)
 
     test_data = common.TrainData()
     try:
-        test_data.read_from_file(test_data_path)
+        test_data.read_from_file(test_data_path, dependent_prefix)
     except ValueError as e:
-        sys.stderr.write("Failed to process the test data: %s\n" % e)
+        logging.error("Failed to process the test data: %s" % e)
         exit(1)
 
     logging.info("Testing the neural network...")
@@ -309,8 +332,8 @@ def test_ann(ann_path, test_data_path, output_path=None, conf_path=None, error=0
             row.append("")
 
         if len(codewords) != len(output):
-            sys.stderr.write("Codeword length (%d) does not match the number of classes. "
-                "Please make sure the correct classes are set in %s\n" % (len(output), conf_path))
+            logging.error("Codeword length (%d) does not match the number of classes. "
+                "Please make sure the correct classes are set in %s" % (len(output), conf_path))
             exit(1)
 
         class_e = get_classification(codewords, output, error)
@@ -341,14 +364,14 @@ def classify(image_path, ann_path, conf_path, error):
     """Classify an image with a trained artificial neural network."""
     for path in (image_path, ann_path, conf_path):
         if path and not os.path.exists(path):
-            sys.stderr.write("Cannot open %s (no such file or directory)\n" % path)
+            logging.error("Cannot open %s (no such file or directory)" % path)
             return 1
 
     yml = open_yaml(conf_path)
     if not yml:
         return 1
     if 'classes' not in yml:
-        sys.stderr.write("Classes are not set in the YAML file. Missing object 'classes'.")
+        logging.error("Classes are not set in the YAML file. Missing object 'classes'.")
         return 1
 
     # Load the ANN.
@@ -358,7 +381,7 @@ def classify(image_path, ann_path, conf_path, error):
     # Get features from image.
     fp = Fingerprint()
     if fp.open(image_path, yml) == None:
-        sys.stderr.write("Failed to read %s\n" % image_path)
+        logging.error("Failed to read %s" % image_path)
         return 1
     features = fp.make()
 
@@ -411,7 +434,7 @@ def get_classification(codewords, codeword, error=0.01):
 
 def open_yaml(path):
     if not os.path.isfile(path):
-        sys.stderr.write("Cannot open %s (no such file)\n" % path)
+        logging.error("Cannot open %s (no such file)" % path)
         return None
 
     f = open(path, 'r')
