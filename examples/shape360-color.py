@@ -25,6 +25,7 @@ sys.path.insert(0, os.path.abspath('.'))
 import cv2
 import numpy as np
 
+import common
 import features as ft
 
 BLACK = (0,0,0)
@@ -48,7 +49,7 @@ def main():
     # Aprse arguments
     parser = argparse.ArgumentParser(description='Get the rough shape from the main object')
     parser.add_argument('path', metavar='PATH', help='Path to image folder')
-    parser.add_argument('--maxdim', metavar='N', type=float, help="Limit the maximum dimension for an input image. The input image is resized if width or height is larger than N. Default is no limit.")
+    parser.add_argument('--max-size', metavar='N', type=float, help="Scale the input image down if its perimeter exceeds N. Default is no scaling.")
     parser.add_argument('--iters', metavar='N', type=int, default=5, help="The number of segmentation iterations. Default is 5.")
     parser.add_argument('--margin', metavar='N', type=int, default=1, help="The margin of the foreground rectangle from the edges. Default is 1.")
     args = parser.parse_args()
@@ -104,12 +105,8 @@ def process_image(args, path):
 
     logging.info("Processing %s..." % path)
 
-    # Resize the image if it is larger then the threshold.
-    max_px = max(img.shape[:2])
-    if args.maxdim and max_px > args.maxdim:
-        logging.info("- Scaling image down...")
-        rf = float(args.maxdim) / max_px
-        img = cv2.resize(img, None, fx=rf, fy=rf)
+    # Scale the image down if its perimeter exceeds the maximum (if set).
+    img = common.scale_max_perimeter(img, args.max_size)
     img_src = img.copy()
 
     # Perform segmentation

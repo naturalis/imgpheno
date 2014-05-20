@@ -3,7 +3,6 @@
 
 import argparse
 import csv
-import logging
 import sys
 
 import cv2
@@ -18,6 +17,17 @@ COLOR = {
     'green':    (0,255,0),
     'red':      (0,0,255)
 }
+
+def scale_max_perimeter(img, m):
+    """Return a scaled down image based on a maximum perimeter `m`.
+
+    The original image is returned if `m` is None or if the image is smaller.
+    """
+    perim = sum(img.shape[:2])
+    if m and perim > m:
+        rf = float(m) / perim
+        img = cv2.resize(img, None, fx=rf, fy=rf)
+    return img
 
 class DictObject(argparse.Namespace):
     def __init__(self, d):

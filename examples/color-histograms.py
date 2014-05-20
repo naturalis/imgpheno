@@ -16,9 +16,8 @@ sys.path.insert(0, os.path.abspath('.'))
 import cv2
 import numpy as np
 
+import common
 import features as ft
-
-MAXDIM = 500
 
 def main():
     print __doc__
@@ -34,11 +33,8 @@ def main():
 
     sys.stderr.write("Processing %s...\n" % args.image)
 
-    # Scale the image down if necessary.
-    max_px = max(img.shape[:2])
-    if max_px > MAXDIM:
-        rf = float(MAXDIM) / max_px
-        img = cv2.resize(img, None, fx=rf, fy=rf)
+    # Scale the image down if its perimeter exceeds the maximum.
+    img = common.scale_max_perimeter(img, 1000)
 
     cs_str = "BGR"
     hists = ft.color_histograms(img, [10,10,10])

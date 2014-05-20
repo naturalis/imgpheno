@@ -20,7 +20,18 @@ IMAGES_RECTANGLE = (
     "../examples/images/rectangle/45.png",
     "../examples/images/rectangle/90.png"
     )
-MAXDIM = 500
+MAX_SIZE = 500
+
+def scale_max_perimeter(img, m):
+    """Return a scaled down image based on a maximum perimeter `m`.
+
+    The original image is returned if `m` is None or if the image is smaller.
+    """
+    perim = sum(img.shape[:2])
+    if m and perim > m:
+        rf = float(m) / perim
+        img = cv2.resize(img, None, fx=rf, fy=rf)
+    return img
 
 def error(a, p, f):
     """Calculate the error between actual `a` and predicted `p` values.
@@ -73,10 +84,7 @@ class TestFeatures(unittest.TestCase):
             raise SystemError("Failed to read %s" % im_path)
 
         # Resize the image if it is larger then the threshold.
-        max_px = max(img.shape[:2])
-        if max_px > MAXDIM:
-            rf = float(MAXDIM) / max_px
-            img = cv2.resize(img, None, fx=rf, fy=rf)
+        img = scale_max_perimeter(img, MAX_SIZE)
 
         # Perform segmentation.
         mask = ft.segment(img, 5, 1)
@@ -156,10 +164,7 @@ class TestFeatures(unittest.TestCase):
                 raise SystemError("Failed to read %s" % im_path)
 
             # Resize the image if it is larger then the threshold.
-            max_px = max(img.shape[:2])
-            if max_px > MAXDIM:
-                rf = float(MAXDIM) / max_px
-                img = cv2.resize(img, None, fx=rf, fy=rf)
+            img = scale_max_perimeter(img, MAX_SIZE)
 
             # Perform segmentation.
             mask = ft.segment(img, 5, 1)

@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.abspath('.'))
 import cv2
 import numpy as np
 
+import common
 import features as ft
 
 def main():
@@ -22,8 +23,8 @@ def main():
     parser.add_argument('-o', '--output', metavar='PATH', default=".", help='Path for output files.')
     parser.add_argument('-i', '--iters', metavar='N', type=int, default=5, help="The number of grabCut iterations. Default is 5.")
     parser.add_argument('-m', '--margin', metavar='N', type=int, default=1, help="The margin of the foreground rectangle from the edges. Default is 1.")
-    parser.add_argument('--maxdim', metavar='N', type=float, default=None, help="Limit the maximum dimension for an input image. The input image is resized if width or height is larger than N. Default is no limit.")
-    parser.add_argument('--mindim', metavar='N', type=int, default=100, help="Limit the minimum dimension for input and output images. Images with a smaller width or height are ignored. Default is 100.")
+    parser.add_argument('--max-size', metavar='N', type=float, help="Scale the input image down if its perimeter exceeds N. Default is no scaling.")
+    parser.add_argument('--min-size-out', metavar='N', type=int, default=200, help="Set the minimum perimeter for output images. Smaller images are ignored. Default is 200.")
     args = parser.parse_args()
 
     for f in args.files:
@@ -41,11 +42,8 @@ def split_image(path, args):
 
     logging.info("Processing %s ..." % path)
 
-    # Resize the image if it is larger than the threshold.
-    max_px = max(img.shape[:2])
-    if args.maxdim and max_px > args.maxdim:
-        rf = float(args.maxdim) / max_px
-        img = cv2.resize(img, None, fx=rf, fy=rf)
+    # Scale the image down if its perimeter exceeds the maximum (if set).
+    img = common.scale_max_perimeter(img, args.max_size)
 
     logging.info("Segmenting...")
 
@@ -60,7 +58,7 @@ def split_image(path, args):
 
     logging.info("Exporting segments...")
     for i, im in enumerate(segments):
-        if im.shape[0] < args.mindim or im.shape[1] < args.mindim:
+        if sum(im.shape[:2]) < args.min_size_out:
             continue
 
         name = os.path.basename(path)

@@ -479,12 +479,12 @@ class Fingerprint(object):
         if 'preprocess' not in self.params:
             return
 
-        # Resize the image if it is larger then the threshold.
-        max_px = max(self.img.shape[:2])
-        maxdim = getattr(self.params.preprocess, 'maximum_dimension', None)
-        if maxdim and max_px > maxdim:
+        # Scale the image down if its perimeter exceeds the maximum (if set).
+        perim = sum(self.img.shape[:2])
+        max_perim = getattr(self.params.preprocess, 'maximum_perimeter', None)
+        if max_perim and perim > max_perim:
             logging.info("Scaling down...")
-            rf = float(maxdim) / max_px
+            rf = float(max_perim) / perim
             self.img = cv2.resize(self.img, None, fx=rf, fy=rf)
 
         # Perform segmentation.

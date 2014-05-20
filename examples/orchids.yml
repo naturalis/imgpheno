@@ -9,9 +9,10 @@ data:
 
 # Preprocessing steps to perform on images before features are extracted.
 preprocess:
-    # Limit the maximum dimension for an input image (optional). The input
-    # image is scaled down if width or height exceeds the value.
-    maximum_dimension: 500
+    # Limit the maximum perimeter for input images (optional). The input
+    # image is scaled down if the perimeter (width * height) exeeds this value.
+    # The input images on disk stay unmodified.
+    maximum_perimeter: 1000
 
     # Perform segmentation on the image, where the background is removed.
     segmentation:
