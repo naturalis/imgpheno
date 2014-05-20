@@ -499,8 +499,13 @@ class Fingerprint(object):
             self.bin_mask = np.where((self.mask==cv2.GC_FGD) + (self.mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
 
             if output_folder and os.path.isdir(output_folder):
-                # Merge the binary mask with the image.
-                img_masked = cv2.bitwise_and(self.img, self.img, mask=self.bin_mask)
+                # Create a binary mask for the largest contour.
+                contour = ft.get_largest_contour(self.bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                contour_mask = np.zeros(self.bin_mask.shape, dtype=np.uint8)
+                cv2.drawContours(contour_mask, [contour], 0, 255, -1)
+
+                # Apply the mask to the image.
+                img_masked = cv2.bitwise_and(self.img, self.img, mask=contour_mask)
 
                 # Save the masked image to the output folder.
                 fname = os.path.basename(self.path)
