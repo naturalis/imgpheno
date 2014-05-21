@@ -127,7 +127,8 @@ def color_histograms(img, histsize=None, mask=None, colorspace=CS_BGR):
 def get_largest_contour(img, mode, method):
     """Get the largest contour from a binary image.
 
-    It is a simple wrapper for ref:`cv2.findContours`.
+    It is a simple wrapper for :meth:`cv2.findContours` to which `mode` and
+    `method` are passed. Returns None if no contours are found.
     """
     if len(img.shape) != 2:
         raise ValueError("Input image must be binary")

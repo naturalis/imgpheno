@@ -543,6 +543,9 @@ class Fingerprint(object):
                 data = self.get_shape_360(args, self.bin_mask)
                 data_row.extend(data)
 
+            else:
+                raise ValueError("Unknown feature '%s'" % feature)
+
         return data_row
 
     def get_color_histograms(self, src, args, bin_mask=None):
@@ -575,6 +578,8 @@ class Fingerprint(object):
 
         # Obtain contours (all points) from the mask.
         contour = ft.get_largest_contour(bin_mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        if contour == None:
+            raise ValueError("No contour found for binary image")
 
         # Get the outline.
         outline = ft.shape_outline(contour, k)
@@ -604,6 +609,8 @@ class Fingerprint(object):
 
         # Get the largest contour from the binary mask.
         contour = ft.get_largest_contour(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        if contour == None:
+            raise ValueError("No contour found for binary image")
 
         # Set the rotation.
         if rotation == 'FIT_ELLIPSE':
