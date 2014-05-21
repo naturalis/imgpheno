@@ -616,8 +616,8 @@ class Fingerprint(object):
         if rotation == 'FIT_ELLIPSE':
             box = cv2.fitEllipse(contour)
             rotation = int(box[2])
-        if not 0 <= rotation <= 180:
-            raise ValueError("Rotation must be an integer between 0 and 180, found %s" % rotation)
+        if not 0 <= rotation <= 179:
+            raise ValueError("Rotation must be in the range 0 to 179, found %s" % rotation)
 
         # Extract shape feature.
         intersects, center = ft.shape_360(contour, rotation, step, t)

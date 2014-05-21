@@ -53,6 +53,7 @@ def main():
     contour = ft.get_largest_contour(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     mask_contour = np.zeros(bin_mask.shape, dtype=np.uint8)
     cv2.drawContours(mask_contour, [contour], 0, 255, -1)
+    cv2.drawContours(img, [contour], 0, common.COLOR['green'], 1)
 
     # Merge the binary mask with the image.
     img_masked = cv2.bitwise_and(img, img, mask=bin_mask)

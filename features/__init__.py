@@ -159,7 +159,8 @@ def contour_properties(contours, properties='basic'):
 
     * ``Area``: The numer of pixels in the contour.
     * ``BoundingBox``: The smallest rectangle containing the contour.
-    * ``Centroid``: The center mass of the contour. This is computed by fitting an ellipse.
+    * ``Centroid``: The center mass of the contour. This is computed by
+      fitting an ellipse.
     * ``ConvexArea``: The number of pixels in the convex hull.
     * ``ConvexHull``: The smalles convex polygon that can contain the contour.
     * ``Eccentricity``: Scalar that specifies the eccentricity of the ellipse
@@ -451,7 +452,8 @@ def shape_360(contour, rotation=0, step=1, t=8):
                     weighted_points.append( (w, tuple(p)) )
 
         #sys.stderr.write("%s -> %s\n" % (len(candidates), len(weighted_points)))
-        assert len(weighted_points) > 0, "No intersections found for angle %d" % angle
+        if len(weighted_points) == 0:
+            raise ValueError("No intersections found for angle %d" % angle)
 
         # Cluster the points.
         weighted_points = weighted_points_nearest(weighted_points, t)

@@ -48,7 +48,7 @@ features:
         step: 1
         # Distance threshold in pixels for point clustering (default is 8).
         t: 8
-        # The output functions control how the shape is returned. Multipple
+        # The output functions control how the shape is returned. Multiple
         # output functions can be specified.
         output_functions:
             # Returns the mean length + standard deviation of the vector from
