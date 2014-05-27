@@ -1,6 +1,9 @@
 ---
 # This is an example parameters file for train.py
 
+# List of class names used for classification. The order does not matter.
+classes: [Brachypetalum, Cochlopetalum, Paphiopedilum, Parvisepalum]
+
 # Describe training data format.
 data:
     # Prefix of classification columns. When generating training data, this
@@ -73,6 +76,12 @@ ann:
     learning_rate: 0.7
     # Connection rate. Default is 1, a fully connected network.
     connection_rate: 1
-
-# List of class names used for classification. The order does not matter.
-classes: [Brachypetalum, Cochlopetalum, Paphiopedilum, Parvisepalum]
+    # The training algorithm used for training. Default is FANN_TRAIN_RPROP.
+    # See http://leenissen.dk/fann/html/files/fann_data-h.html#fann_train_enum
+    training_algorithm: FANN_TRAIN_RPROP
+    # The activation function for the hidden layers. Default is FANN_SIGMOID_STEPWISE.
+    # See http://leenissen.dk/fann/html/files/fann_data-h.html#fann_activationfunc_enum
+    activation_function_hidden: FANN_SIGMOID_SYMMETRIC
+    # The activation function for the output layer. Default is FANN_SIGMOID_STEPWISE.
+    # See http://leenissen.dk/fann/html/files/fann_data-h.html#fann_activationfunc_enum
+    activation_function_output: FANN_SIGMOID_SYMMETRIC

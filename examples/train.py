@@ -226,6 +226,7 @@ def train_ann(train_data_path, output_path, test_data_path=None, conf_path=None,
             logging.error("Cannot open %s (no such file or directory)" % path)
             return 1
 
+    # Instantiate the ANN trainer.
     ann_trainer = common.TrainANN()
     if conf_path:
         yml = open_yaml(conf_path)
@@ -239,6 +240,9 @@ def train_ann(train_data_path, output_path, test_data_path=None, conf_path=None,
             ann_trainer.learning_rate = getattr(yml.ann, 'learning_rate', 0.7)
             ann_trainer.epochs = getattr(yml.ann, 'epochs', 100000)
             ann_trainer.desired_error = getattr(yml.ann, 'error', 0.00001)
+            ann_trainer.training_algorithm = getattr(yml.ann, 'training_algorithm', 'FANN_TRAIN_RPROP')
+            ann_trainer.activation_function_hidden = getattr(yml.ann, 'activation_function_hidden', 'FANN_SIGMOID_STEPWISE')
+            ann_trainer.activation_function_output = getattr(yml.ann, 'activation_function_output', 'FANN_SIGMOID_STEPWISE')
 
     # These arguments overwrite parameters in the YAML file.
     if args:
@@ -246,6 +250,8 @@ def train_ann(train_data_path, output_path, test_data_path=None, conf_path=None,
             ann_trainer.epochs = args.epochs
         if args.error != None:
             ann_trainer.desired_error = args.error
+
+    ann_trainer.iterations_between_reports = ann_trainer.epochs / 50
 
     # Get the prefix for the classification columns.
     dependent_prefix = "OUT:"
@@ -255,10 +261,12 @@ def train_ann(train_data_path, output_path, test_data_path=None, conf_path=None,
     train_data = common.TrainData()
     train_data.read_from_file(train_data_path, dependent_prefix)
 
+    # Train the ANN.
     ann = ann_trainer.train(train_data)
     ann.save(output_path)
     logging.info("Artificial neural network saved to %s" % output_path)
 
+    # Test the ANN with training data.
     logging.info("Testing the neural network...")
     error = ann_trainer.test(train_data)
     logging.info("Mean Square Error on training data: %f" % error)

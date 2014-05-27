@@ -18,6 +18,33 @@ COLOR = {
     'red':      (0,0,255)
 }
 
+FANN_TRAIN_ENUM = {
+    'FANN_TRAIN_INCREMENTAL': libfann.TRAIN_INCREMENTAL,
+    'FANN_TRAIN_BATCH': libfann.TRAIN_BATCH,
+    'FANN_TRAIN_RPROP': libfann.TRAIN_RPROP,
+    'FANN_TRAIN_QUICKPROP': libfann.TRAIN_QUICKPROP
+}
+
+FANN_ACTIVATIONFUNC_ENUM = {
+    'FANN_LINEAR': libfann.LINEAR,
+    'FANN_THRESHOLD': libfann.THRESHOLD,
+    'FANN_THRESHOLD_SYMMETRIC': libfann.THRESHOLD_SYMMETRIC,
+    'FANN_SIGMOID': libfann.SIGMOID,
+    'FANN_SIGMOID_STEPWISE': libfann.SIGMOID_STEPWISE,
+    'FANN_SIGMOID_SYMMETRIC': libfann.SIGMOID_SYMMETRIC,
+    'FANN_SIGMOID_SYMMETRIC_STEPWISE': libfann.SIGMOID_SYMMETRIC_STEPWISE,
+    'FANN_GAUSSIAN': libfann.GAUSSIAN,
+    'FANN_GAUSSIAN_SYMMETRIC': libfann.GAUSSIAN_SYMMETRIC,
+    'FANN_ELLIOT': libfann.ELLIOT,
+    'FANN_ELLIOT_SYMMETRIC': libfann.ELLIOT_SYMMETRIC,
+    'FANN_LINEAR_PIECE': libfann.LINEAR_PIECE,
+    'FANN_LINEAR_PIECE_SYMMETRIC': libfann.LINEAR_PIECE_SYMMETRIC,
+    'FANN_SIN_SYMMETRIC': libfann.SIN_SYMMETRIC,
+    'FANN_COS_SYMMETRIC': libfann.COS_SYMMETRIC,
+    #'FANN_SIN': libfann.SIN,
+    #'FANN_COS': libfann.COS
+}
+
 def scale_max_perimeter(img, m):
     """Return a scaled down image based on a maximum perimeter `m`.
 
@@ -162,9 +189,11 @@ class TrainANN(object):
         self.hidden_layers = 1
         self.hidden_neurons = 8
         self.epochs = 500000
-        self.iterations_between_reports = 1000
+        self.iterations_between_reports = self.epochs / 100
         self.desired_error = 0.0001
-        self.training_algorithm = libfann.TRAIN_INCREMENTAL
+        self.training_algorithm = 'FANN_TRAIN_RPROP'
+        self.activation_function_hidden = 'FANN_SIGMOID_STEPWISE'
+        self.activation_function_output = 'FANN_SIGMOID_STEPWISE'
         self.train_data = None
         self.test_data = None
 
@@ -195,13 +224,16 @@ class TrainANN(object):
         sys.stderr.write("* Connection rate: %s\n" % self.connection_rate)
         if self.training_algorithm not in (libfann.TRAIN_RPROP,):
             sys.stderr.write("* Learning rate: %s\n" % self.learning_rate)
+        sys.stderr.write("* Activation function for the hidden layers: %s\n" % self.activation_function_hidden)
+        sys.stderr.write("* Activation function for the output layer: %s\n" % self.activation_function_output)
+        sys.stderr.write("* Training algorithm: %s\n" % self.training_algorithm)
 
         self.ann = libfann.neural_net()
         self.ann.create_sparse_array(self.connection_rate, layers)
         self.ann.set_learning_rate(self.learning_rate)
-        self.ann.set_activation_function_hidden(libfann.SIGMOID_SYMMETRIC_STEPWISE)
-        self.ann.set_activation_function_output(libfann.SIGMOID_SYMMETRIC_STEPWISE)
-        self.ann.set_training_algorithm(self.training_algorithm)
+        self.ann.set_activation_function_hidden(FANN_ACTIVATIONFUNC_ENUM[self.activation_function_hidden])
+        self.ann.set_activation_function_output(FANN_ACTIVATIONFUNC_ENUM[self.activation_function_output])
+        self.ann.set_training_algorithm(FANN_TRAIN_ENUM[self.training_algorithm])
 
         fann_train_data = libfann.training_data()
         fann_train_data.set_train_data(self.train_data.get_input(), self.train_data.get_output())
