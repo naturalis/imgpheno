@@ -222,7 +222,7 @@ class TrainANN(object):
         sys.stderr.write("Network layout:\n")
         sys.stderr.write("* Neuron layers: %s\n" % layers)
         sys.stderr.write("* Connection rate: %s\n" % self.connection_rate)
-        if self.training_algorithm not in (libfann.TRAIN_RPROP,):
+        if self.training_algorithm not in ('FANN_TRAIN_RPROP',):
             sys.stderr.write("* Learning rate: %s\n" % self.learning_rate)
         sys.stderr.write("* Activation function for the hidden layers: %s\n" % self.activation_function_hidden)
         sys.stderr.write("* Activation function for the output layer: %s\n" % self.activation_function_output)

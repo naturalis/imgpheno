@@ -251,7 +251,7 @@ def train_ann(train_data_path, output_path, test_data_path=None, conf_path=None,
         if args.error != None:
             ann_trainer.desired_error = args.error
 
-    ann_trainer.iterations_between_reports = ann_trainer.epochs / 50
+    ann_trainer.iterations_between_reports = ann_trainer.epochs / 100
 
     # Get the prefix for the classification columns.
     dependent_prefix = "OUT:"
@@ -259,7 +259,11 @@ def train_ann(train_data_path, output_path, test_data_path=None, conf_path=None,
         dependent_prefix = getattr(yml.data, 'dependent_prefix', dependent_prefix)
 
     train_data = common.TrainData()
-    train_data.read_from_file(train_data_path, dependent_prefix)
+    try:
+        train_data.read_from_file(train_data_path, dependent_prefix)
+    except ValueError as e:
+        logging.error("Failed to process the training data: %s" % e)
+        exit(1)
 
     # Train the ANN.
     ann = ann_trainer.train(train_data)
