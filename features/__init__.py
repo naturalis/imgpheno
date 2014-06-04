@@ -660,4 +660,108 @@ def point_rectangle_test(rect, p):
     else:
         return -1
 
+def naik_murthy_linear(img):
+    """Hue-preserving color image enhancement.
+
+    Provides a hue preserving linear transformation with maximum possible
+    contrast. [1]
+
+    1. Naik, S. K. & Murthy, C. A. Hue-preserving color image enhancement
+       without gamut problem. IEEE Trans. Image Process. 12, 1591–8 (2003).
+    """
+    y = img / 255.0
+    itemset = y.itemset
+    maxval = np.amax(y, (1,0))
+    minval = np.amin(y, (1,0))
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1]):
+            x = y[i,j]
+            for k in range(3):
+                a1 = 1.0 / maxval[k]
+                b1 = minval[k] * -1.0
+                yn = a1 * (x[k] + b1)
+                itemset((i,j,k), yn)
+    y *= 255
+    return np.uint8(y)
+
+def naik_murthy_nonlinear(img, f, *args, **kwargs):
+    """Hue-preserving color image enhancement.
+
+    Provides nonlinear hue preserving transformation without gamut problem,
+    provided that linear transformation is initially applied on each of the
+    pixels. [1]
+
+    Argument `f` can be any enhancement function for which the first
+    argument is the pixel intensity, followed by optional arguments `args`
+    or keyword arguments `kwargs`. If keyword argument `fmap` is set to
+    True, `f` must be a 2d ``numpy.ndarray`` with the same shape as `img`.
+    In this case, `f` is used as a lookup table for pixel intensities after
+    enhancement.
+
+    1. Naik, S. K. & Murthy, C. A. Hue-preserving color image enhancement
+       without gamut problem. IEEE Trans. Image Process. 12, 1591–8 (2003).
+    """
+    fmap = kwargs.get('fmap')
+    if fmap:
+        if not isinstance(f, np.ndarray) or f.shape != img.shape[:2]:
+            raise ValueError("Invalid array format for `f`")
+
+    y = img / 255.0
+    itemset = y.itemset
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1]):
+            x = y[i,j]
+            l = x.sum()
+
+            assert 0 <= l <= 3, "Pixel values must be in the range 0..255"
+
+            # Work around zero division error.
+            if l == 0:
+                l = 0.00000001
+
+            # Apply the enhancement function.
+            if not fmap:
+                fl = f(l, *args, **kwargs)
+            else:
+                fl = f.item((i,j))
+
+            # Enhancing the color levels linearly.
+            alpha = float(fl) / l
+            if alpha <= 1:
+                y[i,j] *= alpha
+            else:
+                # Transform the BGR color vector to CMY.
+                x = 1.0 - x
+
+                # Set new scaling factor which is <= 1.
+                alpha = (3 - fl) / (3 - l)
+                assert alpha <= 1, "Scaling factor must be <= 1, found %s" % alpha
+
+                # Scale vector by factor `alpha`.
+                x *= alpha
+
+                # Transform back to BGR space.
+                y[i,j] = 1.0 - x
+
+    y *= 255
+    return np.uint8(y)
+
+def s_type_enhancement(x, delta1=0, delta2=1, m=0.5, n=2):
+    """S-type enhancement function.
+
+    This implements the S-type enhancement function for contrast
+    enhancement of grey scale images. [1]
+
+    1. Naik, S. K. & Murthy, C. A. Hue-preserving color image enhancement
+       without gamut problem. IEEE Trans. Image Process. 12, 1591–8 (2003).
+    """
+    if delta1 <= x <= m:
+        y = delta1 + (m - delta1) * math.pow((x - delta1) / (m - delta1), n)
+    elif m <= x <= delta2:
+        y = delta2 - (delta2 - m) * math.pow((delta2 - x) / (delta2 - m), n)
+    else:
+        raise ValueError("Illegal value for `x` (%s <= x <= %s)" % (delta1, delta2))
+    assert delta1 <= y <= delta2, "Expected `y` to be in range %s..%s, found %s" % (delta1, delta2, y)
+    return y
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
