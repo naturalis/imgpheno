@@ -568,10 +568,10 @@ class Fingerprint(object):
                 img = src
             elif colorspace.lower() == "hsv":
                 colorspace = ft.CS_HSV
-                img = cv2.cvtColor(src, cv2.COLOR_BGR2HSV)
+                img = cv2.cvtColor(np.float32(src)/255.0, cv2.COLOR_BGR2HSV)
             elif colorspace.lower() == "luv":
                 colorspace = ft.CS_LUV
-                img = cv2.cvtColor(src, cv2.COLOR_BGR2LUV)
+                img = cv2.cvtColor(np.float32(src)/255.0, cv2.COLOR_BGR2LUV)
             else:
                 raise ValueError("Unknown colorspace '%s'" % colorspace)
 
