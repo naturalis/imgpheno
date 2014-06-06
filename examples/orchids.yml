@@ -17,6 +17,11 @@ preprocess:
     # The input images on disk stay unmodified.
     maximum_perimeter: 1000
 
+    # Perform color enhancement on images.
+    color_enhancement:
+        # A hue preserving linear transformation with maximum possible contrast.
+        naik_murthy_linear: {}
+
     # Perform segmentation on the image, where the background is removed.
     segmentation:
         # The number of segmentation iterations. Default is 5.

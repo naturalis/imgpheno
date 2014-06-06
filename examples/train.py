@@ -499,6 +499,15 @@ class Fingerprint(object):
             rf = float(max_perim) / perim
             self.img = cv2.resize(self.img, None, fx=rf, fy=rf)
 
+        # Perform color enhancement.
+        color_enhancement = getattr(self.params.preprocess, 'color_enhancement', None)
+        for method, args in vars(color_enhancement).iteritems():
+            if method == 'naik_murthy_linear':
+                logging.info("Color enhancement...")
+                self.img = ft.naik_murthy_linear(self.img)
+            else:
+                raise ValueError("Unknown color enhancement method '%s'" % method)
+
         # Perform segmentation.
         segmentation = getattr(self.params.preprocess, 'segmentation', None)
         if segmentation:
