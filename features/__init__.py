@@ -649,21 +649,43 @@ def point_rectangle_test(rect, p):
     else:
         return -1
 
-def naik_murthy_linear(img):
+def naik_murthy_linear(img, mask=None):
     """Hue-preserving color image enhancement.
 
     Provides a hue preserving linear transformation with maximum possible
-    contrast. [1]
+    contrast. [1] The image `img` can be masked with `mask`, which is a 2d
+    array where a value of 0 or False means the corresponding pixel in
+    `img` is masked, any other value means the pixel is not masked.
 
     1. Naik, S. K. & Murthy, C. A. Hue-preserving color image enhancement
        without gamut problem. IEEE Trans. Image Process. 12, 1591–8 (2003).
     """
+    if img.ndim != 3:
+        raise ValueError("Expected a BGR image")
     y = img / 255.0
+    if mask != None:
+        # Assume OpenCV mask. Convert it to NumPy mask format, and create a
+        # masked array for each channel. Calculate min and max values based on
+        # these masked arrays.
+        if mask.shape[:2] != img.shape[:2]:
+            raise ValueError("Mask shape does not match image shape")
+        mask = np.where((mask == 0) + (mask == False), 1, 0)
+        channels = cv2.split(y)
+        maxval = []
+        minval = []
+        for i in range(3):
+            channels[i] = np.ma.array(channels[i], mask=mask)
+            maxval.append(np.amax(channels[i]))
+            minval.append(np.amin(channels[i]))
+    else:
+        maxval = np.amax(y, (1,0))
+        minval = np.amin(y, (1,0))
+
     itemset = y.itemset
-    maxval = np.amax(y, (1,0))
-    minval = np.amin(y, (1,0))
     for i in range(img.shape[0]):
         for j in range(img.shape[1]):
+            if mask != None and mask.item((i,j)):
+                continue
             x = y[i,j]
             for k in range(3):
                 a1 = 1.0 / maxval[k]
