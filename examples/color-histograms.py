@@ -60,16 +60,9 @@ def main():
 
 def get_min_max(img):
     """Returns the color space ranges for an image."""
-    mins = [[], [], []]
-    maxs = [[], [], []]
-    for x in img:
-        for i in range(3):
-            mins[i].append(min(x[:,i]))
-            maxs[i].append(max(x[:,i]))
-    for i in range(3):
-        mins[i] = min(mins[i])
-        maxs[i] = max(maxs[i])
-    return (mins, maxs)
+    minval = np.amin(img, (1,0))
+    maxval = np.amax(img, (1,0))
+    return (tuple(minval), tuple(maxval))
 
 if __name__ == "__main__":
     main()
