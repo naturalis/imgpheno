@@ -19,13 +19,12 @@ CS_LUV = 103
 CS_RANGE = {
     CS_BGR: ([0, 256], [0, 256], [0, 256]),
     CS_HSV: ([0, 180], [0, 256], [0, 256]),
-    CS_LUV: ([0, 101], [-134, 221], [-140, 123])
+    CS_LUV: ([0, 256], [0, 256], [0, 256])
 }
 
 def moments_get_center(m):
     """Returns the center of mass from moments.
 
-    Sources:
     1. Simon Xinmeng Liao. Image analysis by moments. (1993).
     """
     return np.array( (int(m['m10']/m['m00']), int(m['m01']/m['m00'])) )
@@ -38,9 +37,8 @@ def moments_get_orientation(m):
     """Returns the orientation in radians from moments.
 
     Theta is the angle of the principal axis nearest to the X axis
-    and is in the range -pi/4 <= theta <= pi/4.
+    and is in the range -pi/4 <= theta <= pi/4. [1]
 
-    Sources:
     1. Simon Xinmeng Liao. Image analysis by moments. (1993).
     """
     theta = 0.5 * math.atan( (2 * m['mu11']) / (m['mu20'] - m['mu02']) )
@@ -94,15 +92,6 @@ def color_histograms(img, histsize=None, mask=None, colorspace=CS_BGR):
         * ``CS_BGR`` for the BGR color space (default).
         * ``CS_HSV`` for the HSV color space.
         * ``CS_LUV`` for the CIE 1976 (L\*, u\*, v\*) color space.
-
-    .. note::
-
-        OpenCV uses the following color space ranges:
-            * BGR: B=0-255, G=0-255, R=0-255
-            * HSV: H=0-179, S=0-255, V=0-255
-            * LUV: L=0-100, U=-134-220, V=-140-122
-
-        These ranges are also set in ``CS_RANGE``.
     """
     if colorspace not in CS_RANGE:
         raise ValueError("Unknown colorspace %s." % colorspace)
@@ -691,12 +680,12 @@ def naik_murthy_nonlinear(img, f, *args, **kwargs):
     provided that linear transformation is initially applied on each of the
     pixels. [1]
 
-    Argument `f` can be any enhancement function for which the first
-    argument is the pixel intensity, followed by optional arguments `args`
-    or keyword arguments `kwargs`. If keyword argument `fmap` is set to
-    True, `f` must be a 2d ``numpy.ndarray`` with the same shape as `img`.
-    In this case, `f` is used as a lookup table for pixel intensities after
-    enhancement.
+    Image source `img` must be in the BGR color space. Argument `f` can be
+    any enhancement function for which the first argument is the pixel
+    intensity, followed by optional arguments `args` or keyword arguments
+    `kwargs`. If keyword argument `fmap` is set to True, `f` must be a 2d
+    ``numpy.ndarray`` with the same shape as `img`. In this case, `f` is
+    used as a lookup table for pixel intensities after enhancement.
 
     1. Naik, S. K. & Murthy, C. A. Hue-preserving color image enhancement
        without gamut problem. IEEE Trans. Image Process. 12, 1591–8 (2003).

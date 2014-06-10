@@ -37,11 +37,39 @@ def main():
     img = common.scale_max_perimeter(img, 1000)
 
     cs_str = "BGR"
-    hists = ft.color_histograms(img, [10,10,10])
+    hists = ft.color_histograms(img)
     for i, hist in enumerate(hists):
         print "%s: %s" % (cs_str[i], hist.astype(int).ravel())
+    print "BGR ranges:", get_min_max(img)
+
+    img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    cs_str = "HSV"
+    hists = ft.color_histograms(img_hsv)
+    for i, hist in enumerate(hists):
+        print "%s: %s" % (cs_str[i], hist.astype(int).ravel())
+    print "HSV ranges:", get_min_max(img_hsv)
+
+    img_luv = cv2.cvtColor(img, cv2.COLOR_BGR2LUV)
+    cs_str = "Luv"
+    hists = ft.color_histograms(img_luv)
+    for i, hist in enumerate(hists):
+        print "%s: %s" % (cs_str[i], hist.astype(int).ravel())
+    print "LUV ranges:", get_min_max(img_luv)
 
     return 0
+
+def get_min_max(img):
+    """Returns the color space ranges for an image."""
+    mins = [[], [], []]
+    maxs = [[], [], []]
+    for x in img:
+        for i in range(3):
+            mins[i].append(min(x[:,i]))
+            maxs[i].append(max(x[:,i]))
+    for i in range(3):
+        mins[i] = min(mins[i])
+        maxs[i] = max(maxs[i])
+    return (mins, maxs)
 
 if __name__ == "__main__":
     main()
