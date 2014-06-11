@@ -501,12 +501,13 @@ class Fingerprint(object):
 
         # Perform color enhancement.
         color_enhancement = getattr(self.params.preprocess, 'color_enhancement', None)
-        for method, args in vars(color_enhancement).iteritems():
-            if method == 'naik_murthy_linear':
-                logging.info("Color enhancement...")
-                self.img = ft.naik_murthy_linear(self.img)
-            else:
-                raise ValueError("Unknown color enhancement method '%s'" % method)
+        if color_enhancement:
+            for method, args in vars(color_enhancement).iteritems():
+                if method == 'naik_murthy_linear':
+                    logging.info("Color enhancement...")
+                    self.img = ft.naik_murthy_linear(self.img)
+                else:
+                    raise ValueError("Unknown color enhancement method '%s'" % method)
 
         # Perform segmentation.
         segmentation = getattr(self.params.preprocess, 'segmentation', None)
@@ -516,19 +517,16 @@ class Fingerprint(object):
             margin = getattr(segmentation, 'margin', 1)
             output_folder = getattr(segmentation, 'output_folder', None)
 
+            # Create a binary mask for the largest contour.
             self.mask = ft.segment(self.img, iterations, margin)
             self.bin_mask = np.where((self.mask==cv2.GC_FGD) + (self.mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
+            contour = ft.get_largest_contour(self.bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            self.bin_mask = np.zeros(self.img.shape[:2], dtype=np.uint8)
+            cv2.drawContours(self.bin_mask, [contour], 0, 255, -1)
 
+            # Save the masked image to the output folder.
             if output_folder and os.path.isdir(output_folder):
-                # Create a binary mask for the largest contour.
-                contour = ft.get_largest_contour(self.bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                contour_mask = np.zeros(self.bin_mask.shape, dtype=np.uint8)
-                cv2.drawContours(contour_mask, [contour], 0, 255, -1)
-
-                # Apply the mask to the image.
-                img_masked = cv2.bitwise_and(self.img, self.img, mask=contour_mask)
-
-                # Save the masked image to the output folder.
+                img_masked = cv2.bitwise_and(self.img, self.img, mask=self.bin_mask)
                 fname = os.path.basename(self.path)
                 out_path = os.path.join(output_folder, fname)
                 cv2.imwrite(out_path, img_masked)
