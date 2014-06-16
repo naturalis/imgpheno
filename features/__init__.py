@@ -113,6 +113,72 @@ def color_histograms(img, histsize=None, mask=None, colorspace=CS_BGR):
 
     return hists
 
+def color_bgr_means(src, contour, bins=20):
+    """Returns the histograms for BGR images along X and Y axis.
+
+    The contour `contour` provides the region of interest in the image
+    `src`. This ROI is divided into `bins` equal sections, both
+    horizontally and vertically. For each horizontal and vertical section
+    the mean B, G, and R are computed and returned. Each mean is in the
+    range 0 to 255.
+
+    If pixels outside the contour must be ignored, then `src` should be a
+    masked image (i.e. pixels outside the ROI are black).
+    """
+    if len(src.shape) != 3:
+        raise ValueError("Input image `src` must be in the BGR color space")
+    if bins < 2:
+        raise ValueError("Minimum value for `bins` is 2")
+
+    props = contour_properties([contour], 'BoundingRect')
+    rect_x, rect_y, width, height = props[0]['BoundingRect']
+    centroid = (width/2+rect_x, height/2+rect_y)
+    longest = max([width, height])
+    incr =  float(longest) / bins
+
+    # Calculate X and Y starting points.
+    x_start = centroid[0] - (longest / 2)
+    y_start = centroid[1] - (longest / 2)
+
+    # Compute the mean BGR values.
+    row = []
+    for i in range(bins):
+        x = (incr * i) + x_start
+        y = (incr * i) + y_start
+
+        x_incr = x + incr
+        y_incr = y + incr
+        x_end = x_start + longest
+        y_end = y_start + longest
+
+        # Remove negative values, which otherwise result in reverse indexing.
+        if x_start < 0: x_start = 0
+        if y_start < 0: y_start = 0
+        if x < 0: x = 0
+        if y < 0: y = 0
+        if x_incr < 0: x_incr = 0
+        if y_incr < 0: y_incr = 0
+        if x_end < 0: x_end = 0
+        if y_end < 0: y_end = 0
+
+        # Select horizontal and vertical sections from the image.
+        sample_hor = src[y:y_incr, x_start:x_end]
+        sample_ver = src[y_start:y_end, x:x_incr]
+
+        # Compute the mean B, G, and R for the sections.
+        for sample in [sample_hor, sample_ver]:
+            channels = cv2.split(sample)
+
+            if len(channels) == 0:
+                row.extend([0,0,0])
+                continue
+
+            for k in range(3):
+                row.append( np.mean(channels[k]) )
+
+    assert len(row) == 2 * 3 * bins, "Return value length mismatch"
+    return np.uint16(row)
+
 def get_largest_contour(img, mode, method):
     """Get the largest contour from a binary image.
 
@@ -185,10 +251,10 @@ def contour_properties(contours, properties='basic'):
     """
     if len(contours) == 0:
         raise ValueError("List of contours not set")
-    known_names = ('Area', 'BoundingBox', 'Centroid', 'ConvexArea',
-        'ConvexHull', 'Eccentricity', 'Ellipse', 'EquivDiameter', 'Extent',
-        'Extrema', 'MinorAxisLength', 'MajorAxisLength', 'Orientation',
-        'Perimeter', 'Solidity')
+    known_names = ('Area', 'BoundingBox', 'BoundingRect', 'Centroid',
+        'ConvexArea', 'ConvexHull', 'Eccentricity', 'Ellipse',
+        'EquivDiameter', 'Extent', 'Extrema', 'MinorAxisLength',
+        'MajorAxisLength', 'Orientation', 'Perimeter', 'Solidity')
     if isinstance(properties, str):
         if properties == 'basic':
             properties = ('Area', 'Centroid', 'BoundingBox')
@@ -198,8 +264,9 @@ def contour_properties(contours, properties='basic'):
             properties = properties.split(',')
     if len(properties) == 0:
         raise ValueError("List of properties not set")
-    if not all(p in known_names for p in properties):
-        raise ValueError("Unknown property '%s'" % p)
+    for p in properties:
+        if not p in known_names:
+            raise ValueError("Unknown property '%s'" % p)
 
     stats = []
     for cnt in contours:
@@ -230,7 +297,7 @@ def contour_properties(contours, properties='basic'):
         # Call cv2.minAreaRect if needed.
         match = ('BoundingBox', 'Extent')
         if any(p in match for p in properties):
-            bounding_rect = cv2.minAreaRect(cnt)
+            min_area_rect = cv2.minAreaRect(cnt)
 
         props = {}
         for name in properties:
@@ -238,7 +305,9 @@ def contour_properties(contours, properties='basic'):
             if name == 'Area':
                 val = area
             elif name == 'BoundingBox':
-                val = bounding_rect
+                val = min_area_rect
+            elif name == 'BoundingRect':
+                val = cv2.boundingRect(cnt)
             elif name == 'Centroid':
                 val = centroid
             elif name == 'ConvexArea':
@@ -256,7 +325,7 @@ def contour_properties(contours, properties='basic'):
             elif name == 'EquivDiameter':
                 val = math.sqrt(4 * area / math.pi)
             elif name == 'Extent':
-                (x,y), (w,h), _ = bounding_rect
+                (x,y), (w,h), _ = min_area_rect
                 rect_area = w * h
                 val = float(area) / rect_area
             elif name == 'Extrema':

@@ -2,7 +2,7 @@
 # This is an example parameters file for train.py
 
 # List of class names used for classification. The order does not matter.
-classes: [Brachypetalum, Cochlopetalum, Paphiopedilum, Parvisepalum]
+classes: [Barbata, Brachypetalum, Cochlopetalum, Coryopedilum, Paphiopedilum, Pardalopetalum, Parvisepalum]
 
 # Describe training data format.
 data:
@@ -41,6 +41,12 @@ features:
         BGR: [10,10,10]
         HSV: [10,10,10]
 
+    # Describes the BGR color frequencies along horizontal and vertical axis.
+    color_bgr_means:
+        # Each axis is divided into equal size bins. The color frequencies for
+        # each bin are computed.
+        bins: 20
+
     # Describes the shape outline.
     shape_outline:
         # The shape is measured on `k` points on both X and Y axis.
@@ -72,7 +78,7 @@ ann:
     # Number of hidden neuron layers. Default is 1
     hidden_layers: 1
     # Number of hidden neurons per hidden layer. Default is 8
-    hidden_neurons: 8
+    hidden_neurons: 20
     # Maximum number of epochs. Default is 100000
     epochs: 100000
     # Desired error. Default is 0.00001

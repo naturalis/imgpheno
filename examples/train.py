@@ -142,6 +142,13 @@ def train_data(images_path, conf_path, output_path):
                     for i in range(1, n+1):
                         header_data.append("%s:%d" % (colorspace[ch], i))
 
+        if feature == 'color_bgr_means':
+            bins = getattr(args, 'bins', 20)
+            for i in range(1, bins+1):
+                for axis in ("HOR", "VER"):
+                    for ch in "BGR":
+                        header_data.append("BGR_MN:%d.%s.%s" % (i,axis,ch))
+
         if feature == 'shape_outline':
             n = getattr(args, 'k', 15)
             for i in range(1, n+1):
@@ -521,6 +528,8 @@ class Fingerprint(object):
             self.mask = ft.segment(self.img, iterations, margin)
             self.bin_mask = np.where((self.mask==cv2.GC_FGD) + (self.mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
             contour = ft.get_largest_contour(self.bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            if contour == None:
+                raise ValueError("No contour found for binary image")
             self.bin_mask = np.zeros(self.img.shape[:2], dtype=np.uint8)
             cv2.drawContours(self.bin_mask, [contour], 0, 255, -1)
 
@@ -550,6 +559,11 @@ class Fingerprint(object):
             if feature == 'color_histograms':
                 logging.info("- Running color:histograms...")
                 data = self.get_color_histograms(self.img, args, self.bin_mask)
+                data_row.extend(data)
+
+            elif feature == 'color_bgr_means':
+                logging.info("- Running color:bgr_means...")
+                data = self.get_color_bgr_means(self.img, args, self.bin_mask)
                 data_row.extend(data)
 
             elif feature == 'shape_outline':
@@ -588,6 +602,24 @@ class Fingerprint(object):
                 hist = cv2.normalize(hist, None, -1, 1, cv2.NORM_MINMAX)
                 histograms.extend( hist.ravel() )
         return histograms
+
+    def get_color_bgr_means(self, src, args, bin_mask=None):
+        if self.bin_mask == None:
+            raise ValueError("Binary mask cannot be None")
+
+        # Get the contours from the mask.
+        contour = ft.get_largest_contour(bin_mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if contour == None:
+            raise ValueError("No contour found for binary image")
+
+        # Create a masked image.
+        img = cv2.bitwise_and(src, src, mask=bin_mask)
+
+        bins = getattr(args, 'bins', 20)
+        output = ft.color_bgr_means(img, contour, bins)
+
+        # Normalize data to range -1 .. 1
+        return output * 2.0 / 255 - 1
 
     def get_shape_outline(self, args, bin_mask):
         if self.bin_mask == None:
