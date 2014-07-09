@@ -9,10 +9,9 @@
 The following key bindings are available:
   0 - Original image
   1 - Linearly enhanced
-  2 - Enhanced using S-type function (delta1=0, delta2=3, m=0.5, n=2)
-    W - Linearly enhanced + enhanced using S-type function (delta1=0, delta2=3, m=0.5, n=2)
-    S - Linearly enhanced + enhanced using S-type function (delta1=0, delta2=3, m=1.5, n=2)
-  3 - Enhanced using histogram equalization
+  2 - Non-linearly enhanced with S-type function (delta1=0, delta2=3, m=0.5, n=2)
+    W - Non-linearly enhanced with S-type function (delta1=0, delta2=3, m=1.5, n=2)
+  3 - Histogram equalization and non-linearly enhanced
   ESC - exit
 """
 
@@ -52,9 +51,8 @@ def main():
     enhanced1 = ft.naik_murthy_linear(img)
 
     # Nonlinear enhancement using S-type function
-    enhanced2a = ft.naik_murthy_nonlinear(img, ft.s_type_enhancement, 0, 3, 0.5, 2)
-    enhanced2b = ft.naik_murthy_nonlinear(enhanced1, ft.s_type_enhancement, 0, 3, 0.5, 2)
-    enhanced2c = ft.naik_murthy_nonlinear(enhanced1, ft.s_type_enhancement, 0, 3, 1.5, 2)
+    enhanced2a = ft.naik_murthy_nonlinear(enhanced1, ft.s_type_enhancement, 0, 3, 0.5, 2)
+    enhanced2b = ft.naik_murthy_nonlinear(enhanced1, ft.s_type_enhancement, 0, 3, 1.5, 2)
 
     # Enhancement using histogram equalization
     sums = bgr_to_sums(img) # Range 0..(255*3-1)
@@ -78,8 +76,6 @@ def main():
             cv2.imshow('image', enhanced2a)
         elif k == ord('w'):
             cv2.imshow('image', enhanced2b)
-        elif k == ord('s'):
-            cv2.imshow('image', enhanced2c)
         elif k == ord('3'):
             cv2.imshow('image', enhanced3)
         elif k == 27:
