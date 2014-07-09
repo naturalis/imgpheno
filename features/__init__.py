@@ -776,9 +776,9 @@ def naik_murthy_nonlinear(img, f, *args, **kwargs):
 
             assert 0 <= l <= 3, "Pixel values must be in the range 0..255"
 
-            # Work around zero division error.
+            # Leave black pixels as is (work around zero division error).
             if l == 0:
-                l = 0.00000001
+                continue
 
             # Apply the enhancement function.
             if not fmap:
