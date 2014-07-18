@@ -184,9 +184,9 @@ class TrainANN(object):
         self.epochs = 500000
         self.iterations_between_reports = self.epochs / 100
         self.desired_error = 0.0001
-        self.training_algorithm = 'FANN_TRAIN_RPROP'
-        self.activation_function_hidden = 'FANN_SIGMOID_STEPWISE'
-        self.activation_function_output = 'FANN_SIGMOID_STEPWISE'
+        self.training_algorithm = 'TRAIN_RPROP'
+        self.activation_function_hidden = 'SIGMOID_STEPWISE'
+        self.activation_function_output = 'SIGMOID_STEPWISE'
         self.train_data = None
         self.test_data = None
 
@@ -215,7 +215,7 @@ class TrainANN(object):
         sys.stderr.write("Network layout:\n")
         sys.stderr.write("* Neuron layers: %s\n" % layers)
         sys.stderr.write("* Connection rate: %s\n" % self.connection_rate)
-        if self.training_algorithm not in ('FANN_TRAIN_RPROP',):
+        if self.training_algorithm not in ('TRAIN_RPROP',):
             sys.stderr.write("* Learning rate: %s\n" % self.learning_rate)
         sys.stderr.write("* Activation function for the hidden layers: %s\n" % self.activation_function_hidden)
         sys.stderr.write("* Activation function for the output layer: %s\n" % self.activation_function_output)
