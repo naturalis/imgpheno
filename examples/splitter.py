@@ -48,7 +48,7 @@ def split_image(path, args):
     logging.info("Segmenting...")
 
     # Perform segmentation.
-    mask = ft.segment(img, args.iters, args.margin)
+    mask = common.grabcut_with_margin(img, args.iters, args.margin)
 
     # Create a binary mask. Foreground is made white, background black.
     bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')

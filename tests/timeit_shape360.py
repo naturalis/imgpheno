@@ -15,6 +15,26 @@ import features as ft
 
 contour = None
 
+def grabcut_with_margin(img, iters=5, margin=5):
+    """Segment image into foreground and background pixels.
+
+    Runs the GrabCut algorithm for segmentation. Returns an 8-bit
+    single-channel mask. Its elements may have one of following values:
+        * ``cv2.GC_BGD`` defines an obvious background pixel.
+        * ``cv2.GC_FGD`` defines an obvious foreground pixel.
+        * ``cv2.GC_PR_BGD`` defines a possible background pixel.
+        * ``cv2.GC_PR_FGD`` defines a possible foreground pixel.
+
+    The GrabCut algorithm is executed with `iters` iterations. The ROI is set
+    to the entire image, with a margin of `margin` pixels from the edges.
+    """
+    mask = np.zeros(img.shape[:2], np.uint8)
+    bgdmodel = np.zeros((1,65), np.float64)
+    fgdmodel = np.zeros((1,65), np.float64)
+    rect = (margin, margin, img.shape[1]-margin*2, img.shape[0]-margin*2)
+    cv2.grabCut(img, mask, rect, bgdmodel, fgdmodel, iters, cv2.GC_INIT_WITH_RECT)
+    return mask
+
 def shape_360_v1(contour, rotation=0, step=1, t=8):
     """Returns a shape feature from a contour.
 
@@ -273,7 +293,7 @@ if __name__ == "__main__":
         rf = float(maxdim) / max_px
         img = cv2.resize(img, None, fx=rf, fy=rf)
 
-    mask = ft.segment(img, 5, 1)
+    mask = grabcut_with_margin(img, 5, 1)
     bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
     contour = ft.get_largest_contour(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 

@@ -18,32 +18,25 @@ COLOR = {
     'red':      (0,0,255)
 }
 
-FANN_TRAIN_ENUM = {
-    'FANN_TRAIN_INCREMENTAL': libfann.TRAIN_INCREMENTAL,
-    'FANN_TRAIN_BATCH': libfann.TRAIN_BATCH,
-    'FANN_TRAIN_RPROP': libfann.TRAIN_RPROP,
-    'FANN_TRAIN_QUICKPROP': libfann.TRAIN_QUICKPROP
-}
+def grabcut_with_margin(img, iters=5, margin=5):
+    """Segment image into foreground and background pixels.
 
-FANN_ACTIVATIONFUNC_ENUM = {
-    'FANN_LINEAR': libfann.LINEAR,
-    'FANN_THRESHOLD': libfann.THRESHOLD,
-    'FANN_THRESHOLD_SYMMETRIC': libfann.THRESHOLD_SYMMETRIC,
-    'FANN_SIGMOID': libfann.SIGMOID,
-    'FANN_SIGMOID_STEPWISE': libfann.SIGMOID_STEPWISE,
-    'FANN_SIGMOID_SYMMETRIC': libfann.SIGMOID_SYMMETRIC,
-    'FANN_SIGMOID_SYMMETRIC_STEPWISE': libfann.SIGMOID_SYMMETRIC_STEPWISE,
-    'FANN_GAUSSIAN': libfann.GAUSSIAN,
-    'FANN_GAUSSIAN_SYMMETRIC': libfann.GAUSSIAN_SYMMETRIC,
-    'FANN_ELLIOT': libfann.ELLIOT,
-    'FANN_ELLIOT_SYMMETRIC': libfann.ELLIOT_SYMMETRIC,
-    'FANN_LINEAR_PIECE': libfann.LINEAR_PIECE,
-    'FANN_LINEAR_PIECE_SYMMETRIC': libfann.LINEAR_PIECE_SYMMETRIC,
-    'FANN_SIN_SYMMETRIC': libfann.SIN_SYMMETRIC,
-    'FANN_COS_SYMMETRIC': libfann.COS_SYMMETRIC,
-    #'FANN_SIN': libfann.SIN,
-    #'FANN_COS': libfann.COS
-}
+    Runs the GrabCut algorithm for segmentation. Returns an 8-bit
+    single-channel mask. Its elements may have one of following values:
+        * ``cv2.GC_BGD`` defines an obvious background pixel.
+        * ``cv2.GC_FGD`` defines an obvious foreground pixel.
+        * ``cv2.GC_PR_BGD`` defines a possible background pixel.
+        * ``cv2.GC_PR_FGD`` defines a possible foreground pixel.
+
+    The GrabCut algorithm is executed with `iters` iterations. The ROI is set
+    to the entire image, with a margin of `margin` pixels from the edges.
+    """
+    mask = np.zeros(img.shape[:2], np.uint8)
+    bgdmodel = np.zeros((1,65), np.float64)
+    fgdmodel = np.zeros((1,65), np.float64)
+    rect = (margin, margin, img.shape[1]-margin*2, img.shape[0]-margin*2)
+    cv2.grabCut(img, mask, rect, bgdmodel, fgdmodel, iters, cv2.GC_INIT_WITH_RECT)
+    return mask
 
 def scale_max_perimeter(img, m):
     """Return a scaled down image based on a maximum perimeter `m`.
@@ -231,9 +224,9 @@ class TrainANN(object):
         self.ann = libfann.neural_net()
         self.ann.create_sparse_array(self.connection_rate, layers)
         self.ann.set_learning_rate(self.learning_rate)
-        self.ann.set_activation_function_hidden(FANN_ACTIVATIONFUNC_ENUM[self.activation_function_hidden])
-        self.ann.set_activation_function_output(FANN_ACTIVATIONFUNC_ENUM[self.activation_function_output])
-        self.ann.set_training_algorithm(FANN_TRAIN_ENUM[self.training_algorithm])
+        self.ann.set_activation_function_hidden(getattr(libfann, self.activation_function_hidden))
+        self.ann.set_activation_function_output(getattr(libfann, self.activation_function_output))
+        self.ann.set_training_algorithm(getattr(libfann, self.training_algorithm))
 
         fann_train_data = libfann.training_data()
         fann_train_data.set_train_data(self.train_data.get_input(), self.train_data.get_output())

@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath('.'))
 import cv2
 import numpy as np
 
-from common import COLOR, scale_max_perimeter
+import common
 import features as ft
 
 img = None
@@ -74,12 +74,12 @@ def process_image(args, path):
     logging.info("Processing %s..." % path)
 
     # Scale the image down if its perimeter exceeds the maximum (if set).
-    img = scale_max_perimeter(img, args.max_size)
+    img = common.scale_max_perimeter(img, args.max_size)
     img_src = img.copy()
 
     # Perform segmentation.
     logging.info("- Segmenting...")
-    mask = ft.segment(img, args.iters, args.margin)
+    mask = common.grabcut_with_margin(img, args.iters, args.margin)
     bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
 
     # Obtain contours (all points) from the mask.
@@ -110,9 +110,9 @@ def draw_outline(i, outline, res):
     p2 = (im_x+x2, y)
 
     # Draw the points.
-    cv2.circle(img, p1, 5, COLOR['green'])
-    cv2.circle(img, p2, 5, COLOR['green'])
-    cv2.line(img, p1, p2, COLOR['green'])
+    cv2.circle(img, p1, 5, common.COLOR['green'])
+    cv2.circle(img, p2, 5, common.COLOR['green'])
+    cv2.line(img, p1, p2, common.COLOR['green'])
 
     # Calculate the points for the vertical outline.
     step = float(im_w) / (res - 1)
@@ -122,9 +122,9 @@ def draw_outline(i, outline, res):
     p2 = (x, im_y+y2)
 
     # Draw the points.
-    cv2.circle(img, p1, 5, COLOR['red'])
-    cv2.circle(img, p2, 5, COLOR['red'])
-    cv2.line(img, p1, p2, COLOR['red'])
+    cv2.circle(img, p1, 5, common.COLOR['red'])
+    cv2.circle(img, p2, 5, common.COLOR['red'])
+    cv2.line(img, p1, p2, common.COLOR['red'])
 
     cv2.imshow('image', img)
 

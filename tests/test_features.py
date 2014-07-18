@@ -33,6 +33,26 @@ def scale_max_perimeter(img, m):
         img = cv2.resize(img, None, fx=rf, fy=rf)
     return img
 
+def grabcut_with_margin(img, iters=5, margin=5):
+    """Segment image into foreground and background pixels.
+
+    Runs the GrabCut algorithm for segmentation. Returns an 8-bit
+    single-channel mask. Its elements may have one of following values:
+        * ``cv2.GC_BGD`` defines an obvious background pixel.
+        * ``cv2.GC_FGD`` defines an obvious foreground pixel.
+        * ``cv2.GC_PR_BGD`` defines a possible background pixel.
+        * ``cv2.GC_PR_FGD`` defines a possible foreground pixel.
+
+    The GrabCut algorithm is executed with `iters` iterations. The ROI is set
+    to the entire image, with a margin of `margin` pixels from the edges.
+    """
+    mask = np.zeros(img.shape[:2], np.uint8)
+    bgdmodel = np.zeros((1,65), np.float64)
+    fgdmodel = np.zeros((1,65), np.float64)
+    rect = (margin, margin, img.shape[1]-margin*2, img.shape[0]-margin*2)
+    cv2.grabCut(img, mask, rect, bgdmodel, fgdmodel, iters, cv2.GC_INIT_WITH_RECT)
+    return mask
+
 def error(a, p, f):
     """Calculate the error between actual `a` and predicted `p` values.
 
@@ -76,28 +96,6 @@ class TestFeatures(unittest.TestCase):
         for p1, p2, out in data:
             self.assertEqual( round(ft.point_dist(p1, p2), 4), out )
 
-    def test_segment_split(self):
-        """Test image segmentation and splitting."""
-        im_path = os.path.join(self.base_dir, IMAGE_SLIPPER)
-        img = cv2.imread(im_path)
-        if img == None or img.size == 0:
-            raise SystemError("Failed to read %s" % im_path)
-
-        # Resize the image if it is larger then the threshold.
-        img = scale_max_perimeter(img, MAX_SIZE)
-
-        # Perform segmentation.
-        mask = ft.segment(img, 5, 1)
-
-        # Create a binary mask. Foreground is made white, background black.
-        bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
-
-        # Split the image into segments.
-        segments = ft.split_by_mask(img, bin_mask)
-
-        # Two flowers in image should produce two segments.
-        self.assertEqual( len(list(segments)), 2 )
-
     def test_color_histograms(self):
         """Test color histograms."""
         im_path = os.path.join(self.base_dir, IMAGE_SLIPPER)
@@ -128,7 +126,7 @@ class TestFeatures(unittest.TestCase):
             raise SystemError("Failed to read %s" % im_path)
 
         # Perform segmentation.
-        mask = ft.segment(img, 1, 1)
+        mask = grabcut_with_margin(img, 1, 1)
         bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
 
         # Obtain contours (all points) from the mask.
@@ -167,7 +165,7 @@ class TestFeatures(unittest.TestCase):
             img = scale_max_perimeter(img, MAX_SIZE)
 
             # Perform segmentation.
-            mask = ft.segment(img, 5, 1)
+            mask = grabcut_with_margin(img, 5, 1)
 
             # Create a binary mask. Foreground is made white, background black.
             bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
@@ -232,7 +230,7 @@ class TestFeatures(unittest.TestCase):
                 raise SystemError("Failed to read %s" % im_path)
 
             # Perform segmentation.
-            mask = ft.segment(img, 1, 1)
+            mask = grabcut_with_margin(img, 1, 1)
             bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
 
             # Get contours and properties.
