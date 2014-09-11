@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Module for feature extraction from digital images."""
+"""Packages for extracting useful features from digital images."""
 
 import collections
 import itertools

@@ -2,3 +2,7 @@
 *.pyc
 *.swp
 Session.vim
+
+dist/
+docs/_build/
+imgpheno.egg-info/

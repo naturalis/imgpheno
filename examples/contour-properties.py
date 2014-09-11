@@ -22,7 +22,7 @@ import cv2
 import numpy as np
 
 import common
-import features as ft
+import imgpheno as ft
 
 BLACK = (0,0,0)
 GRAY = (105,105,105)
@@ -76,7 +76,7 @@ def process_image(args, path):
 
     # Perform segmentation
     logging.info("- Segmenting...")
-    mask = common.grabcut_with_margin(img, args.iters, args.margin)
+    mask = common.grabcut(img, args.iters, None, args.margin)
     bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
     contours, hierarchy = cv2.findContours(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 

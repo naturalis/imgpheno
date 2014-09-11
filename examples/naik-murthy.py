@@ -27,7 +27,7 @@ import cv2
 import numpy as np
 
 import common
-import features as ft
+import imgpheno as ft
 
 def main():
     print __doc__

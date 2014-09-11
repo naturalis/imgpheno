@@ -16,7 +16,7 @@ from pyfann import libfann
 import yaml
 
 import common
-import features as ft
+import imgpheno as ft
 
 def main():
     if sys.flags.debug:
@@ -525,7 +525,7 @@ class Fingerprint(object):
             output_folder = getattr(segmentation, 'output_folder', None)
 
             # Create a binary mask for the largest contour.
-            self.mask = common.grabcut_with_margin(self.img, iterations, margin)
+            self.mask = common.grabcut(self.img, iterations, None, margin)
             self.bin_mask = np.where((self.mask==cv2.GC_FGD) + (self.mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
             contour = ft.get_largest_contour(self.bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             if contour == None:

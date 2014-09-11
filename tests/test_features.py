@@ -8,7 +8,7 @@ import unittest
 import numpy as np
 import cv2
 
-from context import features as ft
+from context import imgpheno as ft
 
 IMAGE_SLIPPER = "../examples/images/slipper.jpg"
 IMAGES_ERYCINA = (
@@ -25,7 +25,8 @@ MAX_SIZE = 500
 def scale_max_perimeter(img, m):
     """Return a scaled down image based on a maximum perimeter `m`.
 
-    The original image is returned if `m` is None or if the image is smaller.
+    The perimeter is calculated as image width + height. The original image is
+    returned if `m` is None or if the image perimeter is smaller.
     """
     perim = sum(img.shape[:2])
     if m and perim > m:
@@ -33,24 +34,14 @@ def scale_max_perimeter(img, m):
         img = cv2.resize(img, None, fx=rf, fy=rf)
     return img
 
-def grabcut_with_margin(img, iters=5, margin=5):
-    """Segment image into foreground and background pixels.
-
-    Runs the GrabCut algorithm for segmentation. Returns an 8-bit
-    single-channel mask. Its elements may have one of following values:
-        * ``cv2.GC_BGD`` defines an obvious background pixel.
-        * ``cv2.GC_FGD`` defines an obvious foreground pixel.
-        * ``cv2.GC_PR_BGD`` defines a possible background pixel.
-        * ``cv2.GC_PR_FGD`` defines a possible foreground pixel.
-
-    The GrabCut algorithm is executed with `iters` iterations. The ROI is set
-    to the entire image, with a margin of `margin` pixels from the edges.
-    """
+def grabcut(img, iters=5, roi=None, margin=5):
+    """Run the GrabCut algorithm for segmentation and return the mask."""
     mask = np.zeros(img.shape[:2], np.uint8)
     bgdmodel = np.zeros((1,65), np.float64)
     fgdmodel = np.zeros((1,65), np.float64)
-    rect = (margin, margin, img.shape[1]-margin*2, img.shape[0]-margin*2)
-    cv2.grabCut(img, mask, rect, bgdmodel, fgdmodel, iters, cv2.GC_INIT_WITH_RECT)
+    if not roi:
+        roi = (margin, margin, img.shape[1]-margin*2, img.shape[0]-margin*2)
+    cv2.grabCut(img, mask, roi, bgdmodel, fgdmodel, iters, cv2.GC_INIT_WITH_RECT)
     return mask
 
 def error(a, p, f):
@@ -126,7 +117,7 @@ class TestFeatures(unittest.TestCase):
             raise SystemError("Failed to read %s" % im_path)
 
         # Perform segmentation.
-        mask = grabcut_with_margin(img, 1, 1)
+        mask = grabcut(img, 1, None, 1)
         bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
 
         # Obtain contours (all points) from the mask.
@@ -165,7 +156,7 @@ class TestFeatures(unittest.TestCase):
             img = scale_max_perimeter(img, MAX_SIZE)
 
             # Perform segmentation.
-            mask = grabcut_with_margin(img, 5, 1)
+            mask = grabcut(img, 5, None, 1)
 
             # Create a binary mask. Foreground is made white, background black.
             bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
@@ -230,7 +221,7 @@ class TestFeatures(unittest.TestCase):
                 raise SystemError("Failed to read %s" % im_path)
 
             # Perform segmentation.
-            mask = grabcut_with_margin(img, 1, 1)
+            mask = grabcut(img, 1, None, 1)
             bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
 
             # Get contours and properties.

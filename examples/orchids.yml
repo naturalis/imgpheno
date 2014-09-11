@@ -13,8 +13,8 @@ data:
 # Preprocessing steps to perform on images before features are extracted.
 preprocess:
     # Limit the maximum perimeter for input images (optional). The input
-    # image is scaled down if the perimeter (width * height) exeeds this value.
-    # The input images on disk stay unmodified.
+    # image is scaled down if the image perimeter, calculated as width +
+    # height, exeeds this value. The input images on disk stay unmodified.
     maximum_perimeter: 1000
 
     # Perform color enhancement on images.

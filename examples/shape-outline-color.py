@@ -19,7 +19,7 @@ import cv2
 import numpy as np
 
 import common
-import features as ft
+import imgpheno as ft
 
 img = None
 img_src = None
@@ -79,7 +79,7 @@ def process_image(args, path):
 
     # Perform segmentation.
     logging.info("- Segmenting...")
-    mask = common.grabcut_with_margin(img, args.iters, args.margin)
+    mask = common.grabcut(img, args.iters, None, args.margin)
     bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
 
     # Obtain contours (all points) from the mask.

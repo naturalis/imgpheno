@@ -21,7 +21,7 @@ import cv2
 import numpy as np
 
 import common
-import features as ft
+import imgpheno as ft
 
 def main():
     print __doc__
@@ -44,7 +44,7 @@ def main():
     img = common.scale_max_perimeter(img, args.max_size)
 
     # Perform segmentation.
-    mask = grabcut_with_margin(img, args.iters, args.margin)
+    mask = common.grabcut(img, args.iters, None, args.margin)
 
     # Create a binary mask. Foreground is made white, background black.
     bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
@@ -78,26 +78,6 @@ def main():
     cv2.destroyAllWindows()
 
     return 0
-
-def grabcut_with_margin(img, iters=5, margin=5):
-    """Segment image into foreground and background pixels.
-
-    Runs the GrabCut algorithm for segmentation. Returns an 8-bit
-    single-channel mask. Its elements may have one of following values:
-        * ``cv2.GC_BGD`` defines an obvious background pixel.
-        * ``cv2.GC_FGD`` defines an obvious foreground pixel.
-        * ``cv2.GC_PR_BGD`` defines a possible background pixel.
-        * ``cv2.GC_PR_FGD`` defines a possible foreground pixel.
-
-    The GrabCut algorithm is executed with `iters` iterations. The ROI is set
-    to the entire image, with a margin of `margin` pixels from the edges.
-    """
-    mask = np.zeros(img.shape[:2], np.uint8)
-    bgdmodel = np.zeros((1,65), np.float64)
-    fgdmodel = np.zeros((1,65), np.float64)
-    rect = (margin, margin, img.shape[1]-margin*2, img.shape[0]-margin*2)
-    cv2.grabCut(img, mask, rect, bgdmodel, fgdmodel, iters, cv2.GC_INIT_WITH_RECT)
-    return mask
 
 if __name__ == "__main__":
     main()

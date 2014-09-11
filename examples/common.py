@@ -18,24 +18,33 @@ COLOR = {
     'red':      (0,0,255)
 }
 
-def grabcut_with_margin(img, iters=5, margin=5):
-    """Segment image into foreground and background pixels.
+def grabcut(img, iters=5, roi=None, margin=5):
+    """Wrapper for OpenCV's grabCut function.
 
     Runs the GrabCut algorithm for segmentation. Returns an 8-bit
-    single-channel mask. Its elements may have one of following values:
-        * ``cv2.GC_BGD`` defines an obvious background pixel.
-        * ``cv2.GC_FGD`` defines an obvious foreground pixel.
-        * ``cv2.GC_PR_BGD`` defines a possible background pixel.
-        * ``cv2.GC_PR_FGD`` defines a possible foreground pixel.
+    single-channel mask. Its elements may have the following values:
 
-    The GrabCut algorithm is executed with `iters` iterations. The ROI is set
-    to the entire image, with a margin of `margin` pixels from the edges.
+    * ``cv2.GC_BGD`` defines an obvious background pixel
+    * ``cv2.GC_FGD`` defines an obvious foreground pixel
+    * ``cv2.GC_PR_BGD`` defines a possible background pixel
+    * ``cv2.GC_PR_FGD`` defines a possible foreground pixel
+
+    The GrabCut algorithm is executed with `iters` iterations. The region
+    of interest `roi` can be a 4-tuple ``(x,y,width,height)``. If the ROI
+    is not set, the ROI is set to the entire image, with a margin of
+    `margin` pixels from the borders.
+
+    This method is indirectly executed by :meth:`make`.
     """
     mask = np.zeros(img.shape[:2], np.uint8)
     bgdmodel = np.zeros((1,65), np.float64)
     fgdmodel = np.zeros((1,65), np.float64)
-    rect = (margin, margin, img.shape[1]-margin*2, img.shape[0]-margin*2)
-    cv2.grabCut(img, mask, rect, bgdmodel, fgdmodel, iters, cv2.GC_INIT_WITH_RECT)
+
+    # Use the margin to set the ROI if the ROI was not provided.
+    if not roi:
+        roi = (margin, margin, img.shape[1]-margin*2, img.shape[0]-margin*2)
+
+    cv2.grabCut(img, mask, roi, bgdmodel, fgdmodel, iters, cv2.GC_INIT_WITH_RECT)
     return mask
 
 def scale_max_perimeter(img, m):
