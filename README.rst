@@ -1,5 +1,5 @@
 ========
-imgpheno
+ImgPheno
 ========
 
 ImgPheno is a Python packages for extracting useful features from digital
@@ -21,7 +21,7 @@ This Python package has the following dependencies:
 
   * Python bindings
 
-* Python (2.7.x)
+* Python_ (2.7.x)
 
 For some of the example scripts you need additional dependencies:
 
@@ -35,9 +35,10 @@ software repository::
 More recent versions of some Python packages can be obtained via the Python
 Package Index::
 
-    pip install numpy yaml
+    pip install numpy pyyaml
 
 .. _nbclassify: https://github.com/naturalis/img-classify
 .. _NumPy: http://www.numpy.org/
 .. _OpenCV: http://opencv.org/
+.. _Python: https://www.python.org/
 .. _PyYAML: https://pypi.python.org/pypi/PyYAML
