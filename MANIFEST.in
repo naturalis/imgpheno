@@ -1,0 +1,7 @@
+include *.txt *.rst Makefile
+graft docs
+graft examples/images
+recursive-include examples *.py *.yml
+recursive-include tests *.py
+prune docs/_build
+prune examples/presets
