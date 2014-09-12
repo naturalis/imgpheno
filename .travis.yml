@@ -17,7 +17,7 @@ before_script:
   - mkdir build
   - cd build
   - cmake -DCMAKE_INSTALL_PREFIX=/usr ..
-  - make -j3
+  - make -j8
   - sudo make install
   - cd ../../
   - export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/site-packages/
