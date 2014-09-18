@@ -7,8 +7,8 @@ images.
 
 See the nbclassify_ package for example usage of imgpheno.
 
-.. image:: https://travis-ci.org/naturalis/feature-extraction.svg?branch=master
-   :target: https://travis-ci.org/naturalis/feature-extraction
+.. image:: https://travis-ci.org/naturalis/imgpheno.svg?branch=master
+   :target: https://travis-ci.org/naturalis/imgpheno
 
 Requirements
 ============
@@ -37,7 +37,22 @@ Package Index::
 
     pip install numpy pyyaml
 
-.. _nbclassify: https://github.com/naturalis/img-classify
+
+Installation
+============
+
+The ImgPheno_ package can be installed from the GitHub repository::
+
+    git clone https://github.com/naturalis/imgpheno.git
+    cd imgpheno/
+    python setup.py install
+
+Or if you have a source archive file::
+
+    pip install imgpheno-0.1.0.tar.gz
+
+
+.. _nbclassify: https://github.com/naturalis/nbclassify
 .. _NumPy: http://www.numpy.org/
 .. _OpenCV: http://opencv.org/
 .. _Python: https://www.python.org/
