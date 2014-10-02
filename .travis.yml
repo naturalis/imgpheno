@@ -7,6 +7,7 @@ virtualenv:
   system_site_packages: true
 
 before_install:
+  - sudo apt-add-repository -y ppa:gijzelaar/opencv2.4
   - sudo apt-get update
   - sudo apt-get install -qq python-numpy python-opencv
 
