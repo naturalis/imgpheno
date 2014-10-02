@@ -3,25 +3,11 @@ language: python
 python:
   - "2.7"
 
-compiler:
-  - gcc
+virtualenv:
+  system_site_packages: true
 
-install:
-  - sudo apt-get install python-dev python-numpy
-  #- sudo apt-get install libopencv-core2.4 python-opencv python-numpy
-
-before_script:
-  - wget https://github.com/Itseez/opencv/archive/2.4.9.tar.gz
-  - tar -xzf 2.4.9.tar.gz
-  - cd opencv-2.4.9
-  - mkdir build
-  - cd build
-  - cmake -DCMAKE_INSTALL_PREFIX=/usr ..
-  - make -j8
-  - sudo make install
-  - cd ../../
-  - export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/site-packages/
-  #- ln -s opencv/build/lib/cv2.so
-  #- ln -s opencv/build/lib/cv.py
+before_install:
+  - sudo apt-get update
+  - sudo apt-get install -qq python-numpy python-opencv
 
 script: make test
