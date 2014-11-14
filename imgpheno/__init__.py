@@ -141,6 +141,16 @@ def color_bgr_means(src, contour, bins=20):
         if x_end < 0: x_end = 0
         if y_end < 0: y_end = 0
 
+        # Convert back to integers.
+        y = int(y)
+        y_start = int(y_start)
+        y_incr = int(y_incr)
+        y_end = int(y_end)
+        x = int(x)
+        x_start = int(x_start)
+        x_incr = int(x_incr)
+        x_end = int(x_end)
+
         # Select horizontal and vertical sections from the image.
         sample_hor = src[y:y_incr, x_start:x_end]
         sample_ver = src[y_start:y_end, x:x_incr]
