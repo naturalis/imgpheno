@@ -45,8 +45,8 @@ def main():
     res = args.k
 
     # Create UI
-    cv2.namedWindow('image')
-    cv2.createTrackbar('Position', 'image', 0, args.k-2, set_position)
+    cv2.namedWindow('BGR Means')
+    cv2.createTrackbar('Bin', 'BGR Means', 0, args.k-1, set_position)
 
     process_image(args, args.path)
     while True:
@@ -86,7 +86,8 @@ def process_image(args, path):
     contour = ft.get_largest_contour(bin_mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
     # Get bounding rectange of the largest contour.
-    box = cv2.boundingRect(contour)
+    props = ft.contour_properties([contour], 'BoundingRect')
+    box = props[0]['BoundingRect']
 
     # And draw it.
     logging.info("- Done")
@@ -96,29 +97,34 @@ def draw_outline(i, k):
     global img, img_src, box, bin_mask
 
     img = img_src.copy()
-    im_x, im_y, im_w, im_h = box
-
     img = cv2.bitwise_and(img, img, mask=bin_mask)
 
+    rect_x, rect_y, width, height = box
+    centroid = (width/2+rect_x, height/2+rect_y)
+    longest = max([width, height])
+    step = float(longest) / (k)
+
+    # Calculate X and Y starting points.
+    x_start = centroid[0] - (longest / 2)
+    y_start = centroid[1] - (longest / 2)
+
     # Calculate the points for the horizontal outline.
-    step = float(im_h) / (k - 1)
-    y = int((i * step) + im_y)
-    y2 = int(((i+1) * step) + im_y)
-    pt1 = (im_x, y)
-    pt2 = (im_x+im_w, y2)
+    y = int((i * step) + y_start)
+    y2 = int(((i+1) * step) + y_start)
+    pt1 = (x_start, y)
+    pt2 = (x_start + longest, y2)
 
     cv2.rectangle(img, pt1, pt2, common.COLOR['green'], 1)
 
     # Calculate the points for the vertical outline.
-    step = float(im_w) / (k - 1)
-    x = int((i * step) + im_x)
-    x2 = int(((i+1) * step) + im_x)
-    pt1 = (x, im_y)
-    pt2 = (x2, im_y+im_h)
+    x = int((i * step) + x_start)
+    x2 = int(((i+1) * step) + x_start)
+    pt1 = (x, y_start)
+    pt2 = (x2, y_start + height)
 
     cv2.rectangle(img, pt1, pt2, common.COLOR['red'], 1)
 
-    cv2.imshow('image', img)
+    cv2.imshow('BGR Means', img)
 
 if __name__ == "__main__":
     main()
