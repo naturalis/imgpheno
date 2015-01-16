@@ -96,11 +96,11 @@ def color_histograms(img, histsize=None, mask=None, colorspace=CS_BGR):
 def color_bgr_means(src, contour, bins=20):
     """Returns the histograms for BGR images along X and Y axis.
 
-    The contour `contour` provides the region of interest in the image
-    `src`. This ROI is divided into `bins` equal sections, both
-    horizontally and vertically. For each horizontal and vertical section
-    the mean B, G, and R are computed and returned. Each mean is in the
-    range 0 to 255.
+    The contour `contour` provides the region of interest in the image `src`.
+    This ROI is divided into `bins` equal sections, both horizontally and
+    vertically. For each horizontal and vertical section the mean B, G, and R
+    are computed and returned as a 2-tuple (hor_means, ver_means). Each mean is
+    in the range 0 to 255.
 
     If pixels outside the contour must be ignored, then `src` should be a
     masked image (i.e. pixels outside the ROI are black).
@@ -121,7 +121,7 @@ def color_bgr_means(src, contour, bins=20):
     y_start = centroid[1] - (longest / 2)
 
     # Compute the mean BGR values.
-    row = []
+    means = [[], []]
     for i in range(bins):
         x = (incr * i) + x_start
         y = (incr * i) + y_start
@@ -156,18 +156,20 @@ def color_bgr_means(src, contour, bins=20):
         sample_ver = src[y_start:y_end, x:x_incr]
 
         # Compute the mean B, G, and R for the sections.
-        for sample in [sample_hor, sample_ver]:
+        for i, sample in enumerate([sample_hor, sample_ver]):
             channels = cv2.split(sample)
 
             if len(channels) == 0:
-                row.extend([0,0,0])
+                means[i].extend([0,0,0])
                 continue
 
             for k in range(3):
-                row.append( np.mean(channels[k]) )
+                means[i].append( np.mean(channels[k]) )
 
-    assert len(row) == 2 * 3 * bins, "Return value length mismatch"
-    return np.uint16(row)
+    assert len(means[0] + means[1]) == 2 * 3 * bins, \
+        "Return value length mismatch"
+
+    return (np.uint16(means[0]), np.uint16(means[1]))
 
 def get_largest_contour(img, mode, method):
     """Get the largest contour from a binary image.
@@ -202,7 +204,7 @@ def contour_properties(contours, properties='basic'):
     'basic', only 'Area', 'Centroid', and 'BoundingBox' are computed. You can
     calculate the following properties:
 
-    * ``Area``: The numer of pixels in the contour.
+    * ``Area``: The number of pixels in the contour.
     * ``BoundingBox``: The smallest rectangle containing the contour.
     * ``Centroid``: The center mass of the contour. This is computed by
       fitting an ellipse.
@@ -812,7 +814,8 @@ def s_type_enhancement(x, delta1=0, delta2=1, m=0.5, n=2):
         y = delta2 - (delta2 - m) * math.pow((delta2 - x) / (delta2 - m), n)
     else:
         raise ValueError("Illegal value for `x` (%s <= x <= %s)" % (delta1, delta2))
-    assert delta1 <= y <= delta2, "Expected `y` to be in range %s..%s, found %s" % (delta1, delta2, y)
+    assert delta1 <= y <= delta2, \
+        "Expected `y` to be in range %s..%s, found %s" % (delta1, delta2, y)
     return y
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
