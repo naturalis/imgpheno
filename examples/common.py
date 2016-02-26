@@ -47,6 +47,17 @@ def grabcut(img, iters=5, roi=None, margin=5):
     cv2.grabCut(img, mask, roi, bgdmodel, fgdmodel, iters, cv2.GC_INIT_WITH_RECT)
     return mask
 
+def simple(img, roi):
+    """Performs simple image segmentation.
+
+    :param img: Image object from cv2
+    :param roi: ROI 4-tuple ``(x,y,width,height)``
+    :return: image mask
+    """
+    mask = np.zeros(img.shape[:2], np.uint8)
+    mask[roi[1]:roi[1]+roi[3],roi[0]:roi[0]+roi[2]] = cv2.GC_FGD
+    return mask
+
 def scale_max_perimeter(img, m):
     """Return a scaled down image based on a maximum perimeter `m`.
 

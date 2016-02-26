@@ -31,6 +31,8 @@ def main():
     parser.add_argument('--iters', metavar='N', type=int, default=5, help="The number of grabCut iterations. Default is 5.")
     parser.add_argument('--margin', metavar='N', type=int, default=1, help="The margin of the foreground rectangle from the edges. Default is 1.")
     parser.add_argument('--max-size', metavar='N', type=float, help="Scale the input image down if its perimeter exceeds N. Default is no scaling.")
+    parser.add_argument('--algo', metavar='simple|grabcut', type=str, choices=['simple', 'grabcut'], default='grabcut', help="The segmentation algorithm to use, either 'simple' or 'grabcut'.")
+    parser.add_argument('--roi', metavar='x,y,w,h', type=str, help="Region Of Interest, expressed as X,Y,Width,Height in pixel units.")
     args = parser.parse_args()
 
     img = cv2.imread(args.image)
@@ -43,8 +45,20 @@ def main():
     # Scale the image down if its perimeter exceeds the maximum (if set).
     img = common.scale_max_perimeter(img, args.max_size)
 
+    # Process region of interest argument
+    roi = None
+    if args.roi != None:
+        roi = args.roi.split(',')
+        roi[0] = int(roi[0])
+        roi[1] = int(roi[1])
+        roi[2] = int(roi[2])
+        roi[3] = int(roi[3])
+
     # Perform segmentation.
-    mask = common.grabcut(img, args.iters, None, args.margin)
+    if args.algo == 'grabcut':
+        mask = common.grabcut(img, args.iters, roi, args.margin)
+    else:
+        mask = common.simple(img, roi)
 
     # Create a binary mask. Foreground is made white, background black.
     bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
