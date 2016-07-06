@@ -818,4 +818,14 @@ def s_type_enhancement(x, delta1=0, delta2=1, m=0.5, n=2):
         "Expected `y` to be in range %s..%s, found %s" % (delta1, delta2, y)
     return y
 
+def surf_features(img, ht=400, mask=None):
+    """Exctract image features with SURF algorithm of OpenCV.
+
+    The function takes an image in grayscale, a Hessian Threshold
+    and a mask. Keypoints and descriptors are computed and returned.
+    """
+    surf = cv2.SURF(ht)
+    kp, des = surf.detectAndCompute(img, mask)
+    return kp, des
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
