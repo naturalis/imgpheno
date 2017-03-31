@@ -828,4 +828,35 @@ def surf_features(img, ht=400, mask=None):
     kp, des = surf.detectAndCompute(img, mask)
     return kp, des
 
+def sort_by_distance(points, origin):
+    """
+    This function sorts points according to the distance to the origin on a 2d surface,
+    it returns the list of points in increasing distance from the origin.
+    """
+    sorting = []
+    for i in points:
+        sorting.append(point_dist(origin, i))
+    points_sorted = points[np.argsort(sorting), :]
+    return points_sorted
+
+def perspective_transform(img, coords, coords_new, size=None):
+    """
+    resizes the image by performing a perspective transform.
+    size of destination image is automaticially calculated from the new coordinates if no size is passed.
+    the traps used in the fieldwork in april have dimentions of 198 by 147 mm.
+    size should be of the form (width, height)
+    """
+    if size != None:
+        width, height = size
+    else:
+        width = max(coords_new[:, 0])
+        height = max(coords_new[:, 1])
+    coords = np.array(coords, np.float32)
+    if len(coords) != len(coords_new):
+        print "Not exactly 4 points where provided for perspective transformation"
+        return None
+    matrix = cv2.getPerspectiveTransform(coords, coords_new)
+    warped_img = cv2.warpPerspective(img, matrix, (width, height))
+    return warped_img
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
