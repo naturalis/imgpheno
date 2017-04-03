@@ -13,12 +13,7 @@ import numpy as np
 
 import imgpheno
 
-#import random this is for the drawing of contours with random colours
-'''
-this code would not cooperate and is not neccesary at the moment
 
-import common
-'''
 
 '''
 Code adapted from github.com/Naturalis/imgpheno/examples/train.py
@@ -35,7 +30,7 @@ def main():
 # TODO: Change the code that gets the path to the images to either be fully automatic
     path = "images/sticky-traps"
     #destination = r"./without"
-    image_files = get_images(path)
+    image_files = get_image_paths(path)
     print image_files
 
 
@@ -57,7 +52,7 @@ def run_analysis(contours, filename):
     """
 
     # TODO: have this function automaticially make a file ready for further analysis with R.
-
+    #possibly integrated directly with the webapp.
     properties = imgpheno.contour_properties(contours, ('Area', 'MajorAxisLength',))
     major_axes = [i['MajorAxisLength'] for i in properties]
     smaller_than_4 = [i for i in major_axes if i < 12]
@@ -86,7 +81,7 @@ def find_insects(img_file):
     the colours are distorted since imshow assumes bgr colourspace.
     h value of yellow is 30 here.
     """
-    mask = trap_detection(hsv) #calls the function that detects the trap based on the HSV image
+    mask = hsv_threshold(hsv) #calls the function that detects the trap based on the HSV image
     corners = corner_selection(mask) #finds the four corners based on an approximation of the contour of the mask.
     width = 588
     height = 792
@@ -115,8 +110,9 @@ def find_insects(img_file):
 
     return contours, trap
 
-#does not fit in with the rest of imgpheno, not about feature extraction
-def get_images(path):
+#does not fit in with the rest of imgpheno, not about feature extraction.
+#similar code in different examples also not integrated.
+def get_image_paths(path):
     """returns a list of all images present in the directory 'path'"""
     if not os.path.exists(path):
         logging.error("Cannot open %s (No such file or directory)", path)
@@ -149,8 +145,7 @@ def read_img(path):
     return img
 
 #could expand the code so it is more universal, possibly by having target and allowed deviance arguments.
-#would have to rename the function though, but integragion definitly possible.
-def trap_detection(img):
+def hsv_threshold(img):
     """The corner detection did not work, I switched to a contour
     finding algorithm. this return the outer contour,
     this will be the sticky trap. the next step will be to find the corners
@@ -164,7 +159,7 @@ def trap_detection(img):
 #renaming of the function is desirable.
 def corner_selection(binary):
     """
-    this funtion returns the corners as found by the approximate_contour() function.
+    this funtion takes a binary image, and returns the likely corners of the largest contour in the image.
     These points are sorted according to the distance to the leftmost point.
     """
     contour = imgpheno.get_largest_contour(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
