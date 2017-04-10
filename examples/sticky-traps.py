@@ -1,19 +1,17 @@
 """This is the main code used for the sticky trap project"""
-#importing modules that are used. not all of them are used at the moment,
-#but it is expected that they will be used in the final version.
+# importing modules that are used. not all of them are used at the moment,
+# but it is expected that they will be used in the final version.
 
-#import argparse
+#  import argparse
 import logging
 import mimetypes
 import os
-#import sys
+# import sys
 
 import cv2
 import numpy as np
 
 import imgpheno
-
-
 
 '''
 Code adapted from github.com/Naturalis/imgpheno/examples/train.py
@@ -22,18 +20,17 @@ web functionality for large scale testing.
 '''
 image_list = []
 
+
 def main():
     """start of program,
     creates parser to obtain the path to images to analyse.
     This code is a placehoder as of yet to accelerate the process of testing. this will change in the final version.
     """
-# TODO: Change the code that gets the path to the images to either be fully automatic
+    # TODO: Change the code that gets the path to the images to either be fully automatic
     path = "images/sticky-traps"
-    #destination = r"./without"
+    # destination = r"./without"
     image_files = get_image_paths(path)
     print image_files
-
-
     for img in image_files:
         contours, trap = find_insects(img)
         run_analysis(contours, img)
@@ -52,7 +49,7 @@ def run_analysis(contours, filename):
     """
 
     # TODO: have this function automaticially make a file ready for further analysis with R.
-    #possibly integrated directly with the webapp.
+    # possibly integrated directly with the webapp.
     properties = imgpheno.contour_properties(contours, ('Area', 'MajorAxisLength',))
     major_axes = [i['MajorAxisLength'] for i in properties]
     smaller_than_4 = [i for i in major_axes if i < 12]
@@ -71,25 +68,27 @@ the number of insects larger than 10mm is %s
 """ %(number_of_insects, filename, filename, (average_area/4), len(smaller_than_4),
         len(between_4_and_10), len(larger_than_10))
 
-#wrapper and main script, extremely specific for my project
+
 def find_insects(img_file):
-    "calls all functions in order to analyse the image."
+    """Call all functions in order to analyse the image."""
     img = read_img(img_file)
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV) #converts to HSV colourspace for trap roi selection
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    # converts to HSV colourspace for trap roi selection
     """
     note that when displaying hsv as an image using cv2.imshow
     the colours are distorted since imshow assumes bgr colourspace.
     h value of yellow is 30 here.
     """
-    mask = hsv_threshold(hsv) #calls the function that detects the trap based on the HSV image
-    corners = corner_selection(mask) #finds the four corners based on an approximation of the contour of the mask.
+    mask = hsv_threshold(hsv)  # calls the function that detects the trap based on the HSV image
+    corners = imgpheno.find_corners(mask)  # finds the four corners based on an approximation of the contour of the mask.
     width = 588
     height = 792
+    # this height and width must be easily adjustable.
     points_new = np.array([[0, 0], [width, 0], [0, height], [width, height]], np.float32)
-    trap = imgpheno.perspective_transform(img, corners, points_new) #resizes the image.
-    if trap is None: # This code shows the corners returned by corner_selection, in case not exactly 4 were returned.
+    trap = imgpheno.perspective_transform(img, corners, points_new)  # resizes the image.
+    if trap is None:  # This code shows the corners returned by find_corners, in case not exactly 4 were returned.
         show_corners(corners, img, img_file)
-    #after this the program needs to find the insects present on the trap.
+    # after this the program needs to find the insects present on the trap.
 
     """
     trap = cv2.bilateralFilter(trap, 50, 60, 100) #This eliminates fine texture from the image
@@ -100,8 +99,8 @@ def find_insects(img_file):
     I will not execute this line in the rest of the creation of the program, but i will test the difference with and without
     when the actual fieldwork has taken place.
     """
-    r_channel = trap[:, :, 2] #selects the channel with the highest contrast
-    image_list.append(trap) #displays the image at the end
+    r_channel = trap[:, :, 2]  # selects the channel with the highest contrast
+    image_list.append(trap)  # displays the image at the end
     contours = find_contours(r_channel)
 
     contour_img = trap.copy()
@@ -110,10 +109,9 @@ def find_insects(img_file):
 
     return contours, trap
 
-#does not fit in with the rest of imgpheno, not about feature extraction.
-#similar code in different examples also not integrated.
+
 def get_image_paths(path):
-    """returns a list of all images present in the directory 'path'"""
+    """Return a list of all images present in the directory 'path'."""
     if not os.path.exists(path):
         logging.error("Cannot open %s (No such file or directory)", path)
         return 1
@@ -132,9 +130,10 @@ def get_image_paths(path):
         return 1
     return images
 
-#does not fit in with the rest of imgpheno, not about feature extraction
+
 def read_img(path):
-    """This function reads in the images into an array generated by opencv2.
+    """
+    Read the images into an array generated by opencv2.
     the image is also resized if it is to large
     """
     img = cv2.imread(path, cv2.IMREAD_COLOR)
@@ -144,7 +143,8 @@ def read_img(path):
         img = cv2.resize(img, None, fx=ref, fy=ref)
     return img
 
-#could expand the code so it is more universal, possibly by having target and allowed deviance arguments.
+
+# could expand the code so it is more universal, possibly by having target and allowed deviance arguments.
 def hsv_threshold(img):
     """The corner detection did not work, I switched to a contour
     finding algorithm. this return the outer contour,
@@ -155,36 +155,8 @@ def hsv_threshold(img):
     mask = cv2.inRange(img, lower_yellow, upper_yellow)
     return mask
 
-#this could perhaps be integrated fully. could perhaps sort the points inside the wrapper.
-#renaming of the function is desirable.
-def corner_selection(binary):
-    """
-    this funtion takes a binary image, and returns the likely corners of the largest contour in the image.
-    These points are sorted according to the distance to the leftmost point.
-    """
-    contour = imgpheno.get_largest_contour(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    approx = approximate_contour(contour, 0.05)
-    coords = approx[:, 0]
-    #coords now is a list of the coordinates of the corners, but these coordinates are not in a standard order.
-    x_sorted = coords[np.argsort(coords[:, 0]), :]
-    rightmost = x_sorted[0, :]
-    sorted_points = imgpheno.sort_by_distance(coords, rightmost)
-    return sorted_points
 
-#this could be integrated. Possible to make more general by adding destination points argument.
-#might not be in the scope of imgpheno.
-
-
-#possible candidate, is only a small wrapper though, could almost be accomplished with one line of code.
-def approximate_contour(contour, epsilon, closed=True):
-    """
-    returns an approximated contour based on the contour passed to it.
-    """
-    epsilon2 = epsilon*cv2.arcLength(contour, closed)
-    approx = cv2.approxPolyDP(contour, epsilon2, closed)
-    return approx
-
-#possible candidate, is only a small wrapper though, could almost be accomplished with one line of code.
+# possible candidate, is only a small wrapper though, could almost be accomplished with one line of code.
 def find_contours(image):
     """
     This function returns all contours found in an image using find contours following adaptive thresholding
@@ -194,7 +166,7 @@ def find_contours(image):
     contours = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
     return contours
 
-#unlikely candidate, wrapper just for displaying of images/data
+
 def show_corners(corners, img, img_file):
     "shows the corners found on the image."
     for i in corners:
@@ -204,7 +176,7 @@ def show_corners(corners, img, img_file):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-#unlikely candidate, wrapper just for displaying of images/data
+
 def show_images():
     "Shows all images made during the running of the program for easy lookback."
     if len(image_list) == 0:
@@ -230,7 +202,7 @@ def show_images():
 
     cv2.destroyAllWindows()
 
-#unlikely candidate, wrapper just for saving of images/data
+
 def write_images(destination, images):
     """
     this function takes two arguments: an already existing path where the images are saved,

@@ -843,7 +843,6 @@ def perspective_transform(img, coords, coords_new, size=None):
     """
     resizes the image by performing a perspective transform.
     size of destination image is automaticially calculated from the new coordinates if no size is passed.
-    the traps used in the fieldwork in april have dimentions of 198 by 147 mm.
     size should be of the form (width, height)
     """
     if size != None:
@@ -858,5 +857,29 @@ def perspective_transform(img, coords, coords_new, size=None):
     matrix = cv2.getPerspectiveTransform(coords, coords_new)
     warped_img = cv2.warpPerspective(img, matrix, (width, height))
     return warped_img
+
+
+def find_corners(binary):
+    """
+    this funtion takes a binary image, and returns the likely corners of the largest contour in the image.
+    These points are sorted according to the distance to the leftmost point.
+    """
+    contour = get_largest_contour(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    approx = approximate_contour(contour, 0.05)
+    coords = approx[:, 0]
+    # coords now is a list of the coordinates of the corners, but these coordinates are not in a standard order.
+    x_sorted = coords[np.argsort(coords[:, 0]), :]
+    rightmost = x_sorted[0, :]
+    sorted_points = sort_by_distance(coords, rightmost)
+    return sorted_points
+
+
+def approximate_contour(contour, epsilon, closed=True):
+    """
+    returns an approximated contour based on the contour passed to it, uses the approxPolyDP function from opencv2.
+    """
+    epsilon2 = epsilon*cv2.arcLength(contour, closed)
+    approx = cv2.approxPolyDP(contour, epsilon2, closed)
+    return approx
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
