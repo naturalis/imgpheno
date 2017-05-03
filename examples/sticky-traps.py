@@ -6,10 +6,12 @@
 import logging
 import mimetypes
 import os
-# import sys
+import sys
+import common
 
 import cv2
 import numpy as np
+import yaml
 
 import imgpheno
 
@@ -32,15 +34,21 @@ def main():
     image_files = get_image_paths(path)
     print image_files
     for img in image_files:
-        contours, trap = find_insects(img)
-        run_analysis(contours, img)
+        analyse_photo(img)
 
-        ellipse_img = trap.copy()
-        for i in contours:
-            if len(i) >= 5:
-                ellipse = cv2.fitEllipse(i)
-                cv2.ellipse(ellipse_img, ellipse, (0, 0, 255), 1)
-        image_list.append(ellipse_img)
+
+
+def analyse_photo(img):
+
+    contours, trap = find_insects(img)
+    run_analysis(contours, img)
+
+    ellipse_img = trap.copy()
+    for i in contours:
+        if len(i) >= 5:
+            ellipse = cv2.fitEllipse(i)
+            cv2.ellipse(ellipse_img, ellipse, (0, 0, 255), 1)
+    image_list.append(ellipse_img)
 
 
 def run_analysis(contours, filename):
@@ -81,8 +89,9 @@ def find_insects(img_file):
     """
     mask = hsv_threshold(hsv)  # calls the function that detects the trap based on the HSV image
     corners = imgpheno.find_corners(mask)  # finds the four corners based on an approximation of the contour of the mask.
-    width = 588
-    height = 792
+    #TODO make a config file to edit these values more easily.
+    width = 4*yml.trap_dimensions.Trap_width
+    height = 4*yml.trap_dimensions.Trap_height
     # this height and width must be easily adjustable.
     points_new = np.array([[0, 0], [width, 0], [0, height], [width, height]], np.float32)
     trap = imgpheno.perspective_transform(img, corners, points_new)  # resizes the image.
@@ -99,6 +108,9 @@ def find_insects(img_file):
     I will not execute this line in the rest of the creation of the program, but i will test the difference with and without
     when the actual fieldwork has taken place.
     """
+    if yml.edges_to_crop:
+        trap = crop_image(trap)
+
     r_channel = trap[:, :, 2]  # selects the channel with the highest contrast
     image_list.append(trap)  # displays the image at the end
     contours = find_contours(r_channel)
@@ -167,6 +179,15 @@ def find_contours(image):
     return contours
 
 
+def crop_image(img):
+    short_edge = yml.cropping_width.along_short_edges*4
+    long_edge = yml.cropping_width.along_long_edges*4
+    width, height = img.shape[0:2]
+    print img.shape
+    roi = img[short_edge: width-short_edge , long_edge: height-long_edge]
+    return roi
+# [width, height]
+
 def show_corners(corners, img, img_file):
     "shows the corners found on the image."
     for i in corners:
@@ -213,6 +234,19 @@ def write_images(destination, images):
         name = r"%s/Image_%s.jpg" %(destination, (i+1))
         cv2.imwrite(name, image_list[i])
 
+def open_yaml(path):
+    if not os.path.isfile(path):
+        logging.error("Cannot open %s (no such file)" % path)
+        return None
+
+    f = open(path, 'r')
+    yml = yaml.load(f)
+    yml = common.DictObject(yml)
+    f.close()
+
+    return yml
+
+yml = open_yaml('sticky-traps.yml')
 
 
 if __name__ == "__main__":

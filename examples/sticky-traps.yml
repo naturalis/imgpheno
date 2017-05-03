@@ -1,0 +1,32 @@
+# This file contains the settings for the sticky-traps script.
+# Here you can specify the height and the width of the traps used.
+# Changing the colour of the trap requires altering the python script. I strongly reccomend 'sticking' to yellow
+# It is imperative that the traps have uniform dimensions, this means that the traps cannot be cut by hand.
+# The traps are also required to have no lines or text on them, unless these are on a non sticky area of the trap so it can be cropped out easily.
+
+# This file should not be altered unless the traps used have changed.
+# I strongly reccomend however to maintain the same traps during a project, as it might have an influence on the results.
+# All measurements of size should be in millimetres.
+# The value for the colour is specified in the HSV colour space.
+
+
+######################
+# SIZES OF THE TRAPS #
+######################
+
+# The height and width of the traps should be in millimetres, with the longest of the two measurements beeing represented by the height.
+trap_dimensions:
+  Trap_height: 247
+  Trap_width: 100
+
+# If the trap has edges that can be cropped out, set to 'true'. otherwise, if the entire area of the trap is sticky, set to 'false'
+# reasons to crop out areas are for instance non sticky areas, or small areas of text on the top and bottom of the trap.
+edges_to_crop: true
+
+# Sets the width of the area to be cropped out if the previous setting is 'true'
+# both sides are cropped since the program can't discern between the top and bottom of the trap.
+# If for instance the width along the short edges is set to 25 (mm), then the top 25mm and the bottom 25mm is cropped out of the rescaled image,
+# so you only need to enter the width you want cropped out in millimetres in the real trap.
+cropping_width:
+  along_long_edges: 0
+  along_short_edges: 25
