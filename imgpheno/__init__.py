@@ -824,7 +824,7 @@ def surf_features(img, ht=400, mask=None):
     The function takes an image in grayscale, a Hessian Threshold
     and a mask. Keypoints and descriptors are computed and returned.
     """
-    surf = cv2.SURF(ht)
+    surf = cv2.xfeatures2d.SURF_create(ht)
     kp, des = surf.detectAndCompute(img, mask)
     return kp, des
 
