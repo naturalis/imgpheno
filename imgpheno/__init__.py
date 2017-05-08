@@ -182,7 +182,7 @@ def get_largest_contour(img, mode, method):
         raise ValueError("Input image must be binary")
 
     logging.debug("Going to find contours")
-    contours, hierarchy = cv2.findContours(img, mode, method)
+    _, contours, hierarchy = cv2.findContours(img, mode, method)
     logging.debug("Found %d contours" % len(contours))
     if len(contours) == 1:
         return contours[0]
