@@ -6,6 +6,7 @@
 import collections
 import itertools
 import math
+import logging
 
 import numpy as np
 import cv2
@@ -180,7 +181,9 @@ def get_largest_contour(img, mode, method):
     if len(img.shape) != 2:
         raise ValueError("Input image must be binary")
 
-    contours, hierarchy = cv2.findContours(img, mode, method)
+    logging.debug("Going to find contours")
+    _, contours, hierarchy = cv2.findContours(img, mode, method)
+    logging.debug("Found %d contours" % len(contours))
     if len(contours) == 1:
         return contours[0]
 
@@ -824,7 +827,7 @@ def surf_features(img, ht=400, mask=None):
     The function takes an image in grayscale, a Hessian Threshold
     and a mask. Keypoints and descriptors are computed and returned.
     """
-    surf = cv2.SURF(ht)
+    surf = cv2.xfeatures2d.SURF_create(ht)
     kp, des = surf.detectAndCompute(img, mask)
     return kp, des
 
