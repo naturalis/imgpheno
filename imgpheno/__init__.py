@@ -6,6 +6,7 @@
 import collections
 import itertools
 import math
+import logging
 
 import numpy as np
 import cv2
@@ -180,7 +181,9 @@ def get_largest_contour(img, mode, method):
     if len(img.shape) != 2:
         raise ValueError("Input image must be binary")
 
+    logging.debug("Going to find contours")
     contours, hierarchy = cv2.findContours(img, mode, method)
+    logging.debug("Found %d contours" % len(contours))
     if len(contours) == 1:
         return contours[0]
 
