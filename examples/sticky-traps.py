@@ -246,7 +246,7 @@ def open_yaml(path):
 
     return yml
 
-yml = open_yaml('sticky-traps.yml')
+yml = open_yaml(r'./sticky-traps.yml')
 
 
 if __name__ == "__main__":
