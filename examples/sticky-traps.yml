@@ -17,7 +17,7 @@
 # The height and width of the traps should be in millimetres, with the longest of the two measurements beeing represented by the height.
 trap_dimensions:
   Trap_height: 247
-  Trap_width: 200
+  Trap_width: 100
 
 # If the trap has edges that can be cropped out, set to 'true'. otherwise, if the entire area of the trap is sticky, set to 'false'
 # reasons to crop out areas are for instance non sticky areas, or small areas of text on the top and bottom of the trap.
