@@ -44,7 +44,6 @@ The scripts in the `tests` folder perform some cursory unit tests (which are
 in permanent need of improvement and expansion). The test suite can be executed
 from the top level using the `make test` target.
 
-
 Installation
 ============
 
