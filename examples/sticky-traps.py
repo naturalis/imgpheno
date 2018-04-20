@@ -31,6 +31,15 @@ def main():
     # TODO: Change the code that gets the path to the images to either be fully automatic
     path = "images/sticky-traps"
     # destination = r"./without"
+
+    if yml.result_file == "":
+        pass
+    else:
+        open(yml.result_file, "w")
+        resultfile = open(yml.result_file, "a+")
+        resultfile.write("""File \t Total number of insects \t Average area \t Smaller than 4mm \t Between 4 and 10mm \t Larger than 10mm \n""")
+        resultfile.close()
+
     image_files = get_image_paths(path)
     print image_files
     for img in image_files:
@@ -67,15 +76,23 @@ def run_analysis(contours, filename):
     areas = [i['Area'] for i in properties]
     average_area = np.mean(areas)
     number_of_insects = len(contours)
-    print """
-There are %s insects on the trap in %s.
+
+    print """There are %s insects on the trap in %s.
 The average area of the insects in %s is %d mm square.
 The number of insects smaller than 4mm is %s
 The number of insects between 4 and 10 mm is %s
 the number of insects larger than 10mm is %s
-""" %(number_of_insects, filename, filename, (average_area/4), len(smaller_than_4),
-        len(between_4_and_10), len(larger_than_10))
+""" %(number_of_insects, filename, filename, (average_area/4), len(smaller_than_4), len(between_4_and_10), len(larger_than_10))
 
+    results = """%s \t %s \t %d \t %s \t %s \t %s
+""" %(filename, number_of_insects, (average_area/4), len(smaller_than_4), len(between_4_and_10), len(larger_than_10))
+
+    if yml.result_file == "":
+        pass
+    else:
+        resultfile = open(yml.result_file, "a+")
+        resultfile.write(str(results))
+        resultfile.close()
 
 def find_insects(img_file):
     """Call all functions in order to analyse the image."""
@@ -157,13 +174,26 @@ def read_img(path):
 
 # could expand the code so it is more universal, possibly by having target and allowed deviance arguments.
 def hsv_threshold(img):
-    """The corner detection did not work, I switched to a contour
+    """
+    The corner detection did not work, I switched to a contour
     finding algorithm. this return the outer contour,
     this will be the sticky trap. the next step will be to find the corners
-    using the contour"""
-    lower_yellow = np.array([15, 100, 100])
-    upper_yellow = np.array([45, 255, 255])
-    mask = cv2.inRange(img, lower_yellow, upper_yellow)
+    using the contour
+    """
+
+    """
+    Knowing which HSV colour code to use can be calculated below 
+    by giving a BGR colour code, this will return a HSV colour code. 
+    Specified below is the colour blue. To specify the lower and upper HSV colour
+    codes use lower = [-10, 100, 100] and upper = [+10, 255, 255] respectively.
+    """
+    # blue = np.uint8([[[255, 0, 0]]])
+    # hsv_blue= cv2.cvtColor(blue, cv2.COLOR_BGR2HSV)
+    # print(hsv_blue) #This will give [120, 255, 255]
+
+    lower = np.array(yml.trap_colours.trap_lower)
+    upper = np.array(yml.trap_colours.trap_upper)
+    mask = cv2.inRange(img, lower, upper)
     return mask
 
 
@@ -187,6 +217,7 @@ def crop_image(img):
     return roi
 # [width, height]
 
+
 def show_corners(corners, img, img_file):
     "shows the corners found on the image."
     for i in corners:
@@ -196,42 +227,6 @@ def show_corners(corners, img, img_file):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-
-def show_images():
-    "Shows all images made during the running of the program for easy lookback."
-    if len(image_list) == 0:
-        return
-    cv2.namedWindow('image')
-    i = 0
-    cv2.imshow("image", image_list[i])
-    while True:
-        k = cv2.waitKey(0) & 0xFF
-
-        if k == ord('n'):
-            i += 1
-            if i >= len(image_list):
-                i = 0
-            cv2.imshow("image", image_list[i])
-        elif k == ord('p'):
-            i -= 1
-            if i < 0:
-                i = len(image_list) - 1
-            cv2.imshow("image", image_list[i])
-        elif k == ord('q'):
-            break
-
-    cv2.destroyAllWindows()
-
-
-def write_images(destination, images):
-    """
-    this function takes two arguments: an already existing path where the images are saved,
-    and a list of images in the Mat format.
-    the function then saves them, naming them according to their place in the image list.
-    """
-    for i in range(len(images)):
-        name = r"%s/Image_%s.jpg" %(destination, (i+1))
-        cv2.imwrite(name, image_list[i])
 
 def open_yaml(path):
     if not os.path.isfile(path):
@@ -250,4 +245,4 @@ yml = open_yaml(r'./sticky-traps.yml')
 
 if __name__ == "__main__":
     main()
-    show_images()
+
