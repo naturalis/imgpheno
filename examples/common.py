@@ -7,7 +7,7 @@ import sys
 
 import cv2
 import numpy as np
-from pyfann import libfann
+from fann2 import libfann
 
 COLOR = {
     'black':    (0,0,0),

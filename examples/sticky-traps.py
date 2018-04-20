@@ -99,9 +99,8 @@ def find_insects(img_file):
         show_corners(corners, img, img_file)
     # after this the program needs to find the insects present on the trap.
 
-    """
     trap = cv2.bilateralFilter(trap, 50, 60, 100) #This eliminates fine texture from the image
-
+    """
     the above line of code reduces the amount of false positives in the current test images (29th of March),
     However it also multiplies the computing time of each photo by a factor of at least 10.
     these false positives however seem to arise due to the texture of the folders in which the traps were photographed.
