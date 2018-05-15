@@ -16,11 +16,11 @@
 # The height and width of the traps should be in millimetres, with the longest of the two measurements beeing represented by the height.
 trap_dimensions:
   Trap_height: 247
-  Trap_width: 200
+  Trap_width: 100
 
-# If the trap has edges that can be cropped out, set to 'true'. otherwise, if the entire area of the trap is sticky, set to 'false'
+# If the trap has edges that can be cropped out, set to 'True'. otherwise, if the entire area of the trap is sticky, set to 'False'
 # reasons to crop out areas are for instance non sticky areas, or small areas of text on the top and bottom of the trap.
-edges_to_crop: true
+edges_to_crop: True
 
 # Sets the width of the area to be cropped out if the previous setting is 'true'
 # both sides are cropped since the program can't discern between the top and bottom of the trap.
@@ -37,13 +37,21 @@ cropping_width:
 # In sticky-traps.py there is a converter present to convert BGR to HSV, in the function hsv_threshold, however to calculate the H value can also 
 # be done by converting BGR to HSV online and deviding the H value by 2.
 trap_colours:
-  trap_lower: [25, 100, 100]
+  trap_lower: [15, 100, 100]
   trap_upper: [45, 255, 255]
+
+# There are two possible options to determine the sizes of the insects found on the traps. Setting detailed_size_classes to True will enable the
+# detailed sizing classes: 0-1mm, 1-4mm, 4-7mm, 7-12mm, and >12mm.
+# Setting detailed_size_classes to False will enable the standard sizing classes: <4mm, 4-10, and >10mm.
+detailed_size_classes: False
 
 # Set a file below to get the results in the specified file. If no file is set the results will only be printed on the commandline.
 # The file will be created and results will be printed in tab delimited format, with the headers: 
 # File, Total number of insects, Average area, Smaller than 4mm, Between 4 and 10mm, Larger than 10mm
+# or, when detailed size classes are set True:
+# File, Total number of insects, Average area, Between 0 and 1mm, Between 1 and 4mm, Between 4 and 7mm, Between 7 and 12mm, and Larger than 12mm
 # If there is no need for a file to save the results in a file, then set result_file to
 # result_file: ""
 # !!Each time sticky-traps.py runs it clears the result_file!!
 result_file: "ymloutputfile.txt"
+

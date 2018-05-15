@@ -41,7 +41,6 @@ def main():
         resultfile.close()
 
     image_files = get_image_paths(path)
-    print image_files
     for img in image_files:
         analyse_photo(img)
 
@@ -49,50 +48,101 @@ def main():
 
 def analyse_photo(img):
 
-    contours, trap = find_insects(img)
-    run_analysis(contours, img)
+    contours, trap, message = find_insects(img)
+    run_analysis(contours, img, message)
+    if trap is None:
+        noimg = None
+        image_list.append(noimg)
+    else:
+        ellipse_img = trap.copy()
+        for i in contours:
+            if len(i) >= 5:
+                ellipse = cv2.fitEllipse(i)
+                cv2.ellipse(ellipse_img, ellipse, (0, 0, 255), 1)
+        image_list.append(ellipse_img)
 
-    ellipse_img = trap.copy()
-    for i in contours:
-        if len(i) >= 5:
-            ellipse = cv2.fitEllipse(i)
-            cv2.ellipse(ellipse_img, ellipse, (0, 0, 255), 1)
-    image_list.append(ellipse_img)
 
-
-def run_analysis(contours, filename):
+def run_analysis(contours, filename, message):
     """
     does an analysis on the contours found, and returns relevant data
     """
+    OUTPUT_FOTO = "foto_output.txt" # creating temporary output file.
+    Foto_output_file = open(OUTPUT_FOTO, "a+") # cleaning temporary output file.
 
     # TODO: have this function automaticially make a file ready for further analysis with R.
     # possibly integrated directly with the webapp.
-    properties = imgpheno.contour_properties(contours, ('Area', 'MajorAxisLength',))
-    major_axes = [i['MajorAxisLength'] for i in properties]
-    smaller_than_4 = [i for i in major_axes if i < 12]
-    between_4_and_10 = [i for i in major_axes if i >= 12 and i < 40]
-    larger_than_10 = [i for i in major_axes if i >= 40]
 
-    areas = [i['Area'] for i in properties]
-    average_area = np.mean(areas)
-    number_of_insects = len(contours)
-
-    print """There are %s insects on the trap in %s.
-The average area of the insects in %s is %d mm square.
-The number of insects smaller than 4mm is %s
-The number of insects between 4 and 10 mm is %s
-the number of insects larger than 10mm is %s
-""" %(number_of_insects, filename, filename, (average_area/4), len(smaller_than_4), len(between_4_and_10), len(larger_than_10))
-
-    results = """%s \t %s \t %d \t %s \t %s \t %s
-""" %(filename, number_of_insects, (average_area/4), len(smaller_than_4), len(between_4_and_10), len(larger_than_10))
-
-    if yml.result_file == "":
-        pass
+    if message != "":
+        results = message
+        if yml.result_file == "":
+            pass
+        else:
+            resultfile = open(yml.result_file, "a+")
+            resultfile.write(str(results))
+            resultfile.close()
     else:
-        resultfile = open(yml.result_file, "a+")
-        resultfile.write(str(results))
-        resultfile.close()
+        properties = imgpheno.contour_properties(contours, ('Area', 'MajorAxisLength',))
+        major_axes = [i['MajorAxisLength'] for i in properties]
+
+        if yml.detailed_size_classes is True:
+            b_0_1 = [i for i in major_axes if i < 4]
+            b_1_4 = [i for i in major_axes if 4 <= i < 15]
+            b_4_7 = [i for i in major_axes if 15 <= i < 26]
+            b_7_12 = [i for i in major_axes if 26 <= i < 45]
+            larger_12 = [i for i in major_axes if i >= 45]
+
+            areas = [i['Area'] for i in properties]
+            average_area = np.mean(areas)
+            number_of_insects = (len(b_0_1) + len(b_1_4) + len(b_4_7) + len(b_7_12) + len(larger_12))
+
+            print """There are %s insects on the trap in %s.
+The average area of the insects in %s is %d mm square.
+The number of insects between 0 and 1 mm is %s
+The number of insects between 1 and 4 mm is %s
+The number of insects between 4 and 7 mm is %s
+The number of insects between 7 and 12 mm is %s
+The number of insects larger than 12 mm is %s
+        """ %(number_of_insects, filename.replace("images/sticky-traps/", ""), filename.replace("images/sticky-traps/", ""),
+              (average_area/4), len(b_0_1), len(b_1_4), len(b_4_7), len(b_7_12), len(larger_12))
+
+            results = """%s \t %s \t %d \t %s \t %s \t %s \t %s \t %s
+        """ %(filename.replace("images/sticky-traps/", ""), number_of_insects, (average_area/4), len(b_0_1),
+              len(b_1_4), len(b_4_7), len(b_7_12), len(larger_12))
+
+            if yml.result_file == "":
+                pass
+            else:
+                resultfile = open(yml.result_file, "a+")
+                resultfile.write(str(results.replace("    ", "")))
+                resultfile.close()
+
+        else:
+            smaller_than_4 = [i for i in major_axes if i < 12]
+            between_4_and_10 = [i for i in major_axes if i >= 12 and i < 40]
+            larger_than_10 = [i for i in major_axes if i >= 40]
+
+            areas = [i['Area'] for i in properties]
+            average_area = np.mean(areas)
+            number_of_insects = (len(smaller_than_4) + len(between_4_and_10) + len(larger_than_10))
+
+            print """There are %s insects on the trap in %s.
+The average area of the insects in %s is %d mm square.
+The number of insects smaller than 4 mm is %s
+The number of insects between 4 and 10 mm is %s
+The number of insects larger than 10 mm is %s
+            """ %(number_of_insects, filename.replace("images/sticky-traps/", ""), filename.replace("images/sticky-traps/", ""),
+                  (average_area/4), len(smaller_than_4), len(between_4_and_10), len(larger_than_10))
+
+            results = """%s \t %s \t %d \t %s \t %s \t %s
+            """ %(filename.replace("images/sticky-traps/", ""), number_of_insects, (average_area/4), len(smaller_than_4),
+                  len(between_4_and_10), len(larger_than_10))
+
+            if yml.result_file == "":
+                pass
+            else:
+                resultfile = open(yml.result_file, "a+")
+                resultfile.write(str(results.replace("    ", "")))
+                resultfile.close()
 
 def find_insects(img_file):
     """Call all functions in order to analyse the image."""
@@ -106,14 +156,21 @@ def find_insects(img_file):
     """
     mask = hsv_threshold(hsv)  # calls the function that detects the trap based on the HSV image
     corners = imgpheno.find_corners(mask)  # finds the four corners based on an approximation of the contour of the mask.
-    #TODO make a config file to edit these values more easily.
+    # TODO make a config file to edit these values more easily.
     width = 4*yml.trap_dimensions.Trap_width
     height = 4*yml.trap_dimensions.Trap_height
     # this height and width must be easily adjustable.
-    points_new = np.array([[0, 0], [width, 0], [0, height], [width, height]], np.float32)
-    trap = imgpheno.perspective_transform(img, corners, points_new)  # resizes the image.
+    try:
+        points_new = np.array([[0, 0], [width, 0], [0, height], [width, height]], np.float32)
+        trap = imgpheno.perspective_transform(img, corners, points_new)  # resizes the image.
+    except:
+        message = "Analyse niet mogelijk van file " +img_file.replace("images/", "")+ "\n"
+        trap = None
     if trap is None:  # This code shows the corners returned by find_corners, in case not exactly 4 were returned.
         show_corners(corners, img, img_file)
+        contours = None
+        trap = None
+        message = "Analyse niet mogelijk van file " +img_file.replace("images/", "")+ "\n"
     # after this the program needs to find the insects present on the trap.
 
     trap = cv2.bilateralFilter(trap, 50, 60, 100) #This eliminates fine texture from the image
@@ -134,8 +191,9 @@ def find_insects(img_file):
     contour_img = trap.copy()
     cv2.drawContours(contour_img, contours, -1, [0, 0, 255], -1)
     image_list.append(contour_img)
+    message = ""
 
-    return contours, trap
+    return contours, trap, message
 
 
 def get_image_paths(path):
@@ -191,6 +249,9 @@ def hsv_threshold(img):
     # hsv_blue= cv2.cvtColor(blue, cv2.COLOR_BGR2HSV)
     # print(hsv_blue) #This will give [120, 255, 255]
 
+    # lower = np.array([15, 100, 100]) #Yellow trap
+    # upper = np.array([45, 255, 255]) #Yellow trap
+
     lower = np.array(yml.trap_colours.trap_lower)
     upper = np.array(yml.trap_colours.trap_upper)
     mask = cv2.inRange(img, lower, upper)
@@ -212,7 +273,6 @@ def crop_image(img):
     short_edge = yml.cropping_width.along_short_edges*4
     long_edge = yml.cropping_width.along_long_edges*4
     width, height = img.shape[0:2]
-    print img.shape
     roi = img[short_edge: width-short_edge , long_edge: height-long_edge]
     return roi
 # [width, height]
@@ -223,9 +283,6 @@ def show_corners(corners, img, img_file):
     for i in corners:
         cv2.circle(img, tuple(i), 5, [0, 0, 255], -1)
     msg = "corners found in " + str(img_file)
-    cv2.imshow(msg, img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
 
 
 def open_yaml(path):
