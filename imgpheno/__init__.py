@@ -55,7 +55,7 @@ def split_by_mask(img, mask):
     if len(mask.shape) != 2:
         raise ValueError("Mask must be binary")
 
-    contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    _, contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     for contour in contours:
         bin_mask = np.zeros(img.shape[:2], dtype=np.uint8)
         cv2.drawContours(bin_mask, [contour], 0, 255, -1, 8, hierarchy, 0)
@@ -182,7 +182,7 @@ def get_largest_contour(img, mode, method):
         raise ValueError("Input image must be binary")
 
     logging.debug("Going to find contours")
-    contours, hierarchy = cv2.findContours(img, mode, method)
+    _, contours, hierarchy = cv2.findContours(img, mode, method)
     logging.debug("Found %d contours" % len(contours))
     if len(contours) == 1:
         return contours[0]
