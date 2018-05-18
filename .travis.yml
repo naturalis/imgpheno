@@ -12,6 +12,6 @@ before_install:
   - sudo apt-get update
   - pip install --upgrade pip
   - sudo apt-get install -qq python-numpy
-  - sudo pip install python-opencv
+  - sudo pip install opencv-python
 
 script: make test
