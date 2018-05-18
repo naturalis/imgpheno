@@ -113,7 +113,7 @@ class TestFeatures(unittest.TestCase):
 
         im_path = os.path.join(self.base_dir, path)
         img = cv2.imread(im_path)
-        if img == None or img.size == 0:
+        if img is None or img.size is 0:
             raise SystemError("Failed to read %s" % im_path)
 
         # Perform segmentation.
