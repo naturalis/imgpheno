@@ -30,7 +30,8 @@ For some of the example scripts you need additional dependencies:
 On Debian (based) systems, most dependencies can be installed from the
 software repository::
 
-    apt-get install python-opencv python-numpy python-yaml
+    apt-get install python-numpy python-yaml
+    pip install opencv-python
 
 More recent versions of some Python packages can be obtained via the Python
 Package Index::
