@@ -225,7 +225,7 @@ class TestFeatures(unittest.TestCase):
             bin_mask = np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
 
             # Get contours and properties.
-            contours, hierarchy = cv2.findContours(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            _, contours, hierarchy = cv2.findContours(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             props = ft.contour_properties(contours, 'all')
 
             # Check if the properties have the expected values.
