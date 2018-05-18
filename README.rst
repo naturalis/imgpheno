@@ -17,7 +17,7 @@ This Python package has the following dependencies:
 
 * NumPy_
 
-* OpenCV_ (2.4.x)
+* OpenCV_ (3.4.x)
 
   * Python bindings
 
