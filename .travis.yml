@@ -10,6 +10,8 @@ before_install:
   - sudo rm -rf /var/lib/apt/lists/*
   - sudo apt-get clean
   - sudo apt-get update
-  - sudo apt-get install -qq python-numpy python-opencv=3.4.0
+  - pip install --upgrade pip
+  - sudo apt-get install -qq python-numpy
+  - sudo pip install python-opencv
 
 script: make test
