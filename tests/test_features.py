@@ -91,7 +91,7 @@ class TestFeatures(unittest.TestCase):
         """Test color histograms."""
         im_path = os.path.join(self.base_dir, IMAGE_SLIPPER)
         img = cv2.imread(im_path)
-        if img == None or img.size == 0:
+        if img is None or img.size is 0:
             raise SystemError("Failed to read %s" % im_path)
 
         hists = ft.color_histograms(img)
@@ -149,7 +149,7 @@ class TestFeatures(unittest.TestCase):
         for i, path in enumerate(IMAGES_ERYCINA):
             im_path = os.path.join(self.base_dir, path)
             img = cv2.imread(im_path)
-            if img == None or img.size == 0:
+            if img is None or img.size is 0:
                 raise SystemError("Failed to read %s" % im_path)
 
             # Resize the image if it is larger then the threshold.
@@ -217,7 +217,7 @@ class TestFeatures(unittest.TestCase):
         for i, path in enumerate(IMAGES_RECTANGLE[:2]):
             im_path = os.path.join(self.base_dir, path)
             img = cv2.imread(im_path)
-            if img == None or img.size == 0:
+            if img is None or img.size is 0:
                 raise SystemError("Failed to read %s" % im_path)
 
             # Perform segmentation.
