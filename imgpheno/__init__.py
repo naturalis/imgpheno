@@ -245,7 +245,7 @@ def contour_properties(contours, properties='basic'):
     See also: http://www.mathworks.com/help/images/ref/regionprops.html
     """
     if len(contours) == 0:
-        raise ValueError("List of contours not set")
+        properties = None
     known_names = ('Area', 'BoundingBox', 'BoundingRect', 'Centroid',
         'ConvexArea', 'ConvexHull', 'Eccentricity', 'Ellipse',
         'EquivDiameter', 'Extent', 'Extrema', 'MinorAxisLength',
@@ -257,92 +257,93 @@ def contour_properties(contours, properties='basic'):
             properties = known_names
         else:
             properties = properties.split(',')
-    if len(properties) == 0:
-        raise ValueError("List of properties not set")
-    for p in properties:
-        if not p in known_names:
-            raise ValueError("Unknown property '%s'" % p)
+    if properties is None:
+        properties = None
+    else:
+        for p in properties:
+            if not p in known_names:
+                raise ValueError("Unknown property '%s'" % p)
 
-    stats = []
-    for cnt in contours:
-        # Call cv2.fitEllipse if needed.
-        match = ('Centroid', 'Eccentricity', 'Ellipse', 'MinorAxisLength',
-        'MajorAxisLength', 'Orientation')
-        if any(p in match for p in properties):
-            if len(cnt) >= 5:
-                ellipse = cv2.fitEllipse(cnt)
-                centroid, (b, a), angle = ellipse
-                x,y = centroid
-                centroid = (int(x), int(y))
-            else:
-                ellipse = centroid = b = a = angle = None
-
-        # Call cv2.convexHull if needed.
-        match = ('ConvexHull', 'ConvexArea', 'Solidity')
-        if any(p in match for p in properties):
-            hull = cv2.convexHull(cnt)
-
-        # Call cv2.contourArea if needed.
-        match = ('Area', 'EquivDiameter', 'Extent')
-        if any(p in match for p in properties):
-            area = cv2.contourArea(cnt)
-            if not area > 0:
-                continue
-
-        # Call cv2.minAreaRect if needed.
-        match = ('BoundingBox', 'Extent')
-        if any(p in match for p in properties):
-            min_area_rect = cv2.minAreaRect(cnt)
-
-        props = {}
-        for name in properties:
-            val = None
-            if name == 'Area':
-                val = area
-            elif name == 'BoundingBox':
-                val = min_area_rect
-            elif name == 'BoundingRect':
-                val = cv2.boundingRect(cnt)
-            elif name == 'Centroid':
-                val = centroid
-            elif name == 'ConvexArea':
-                val = cv2.contourArea(hull)
-            elif name == 'ConvexHull':
-                val = hull
-            elif name == 'Eccentricity':
-                if ellipse == None:
-                    val = None
+        stats = []
+        for cnt in contours:
+            # Call cv2.fitEllipse if needed.
+            match = ('Centroid', 'Eccentricity', 'Ellipse', 'MinorAxisLength',
+            'MajorAxisLength', 'Orientation')
+            if any(p in match for p in properties):
+                if len(cnt) >= 5:
+                    ellipse = cv2.fitEllipse(cnt)
+                    centroid, (b, a), angle = ellipse
+                    x,y = centroid
+                    centroid = (int(x), int(y))
                 else:
-                    f = math.sqrt(math.pow(a, 2) - math.pow(b, 2))
-                    val = float(f) / a
-            elif name == 'Ellipse':
-                val = ellipse
-            elif name == 'EquivDiameter':
-                val = math.sqrt(4 * area / math.pi)
-            elif name == 'Extent':
-                (x,y), (w,h), _ = min_area_rect
-                rect_area = w * h
-                val = float(area) / rect_area
-            elif name == 'Extrema':
-                topmost     = tuple(cnt[cnt[:,:,1].argmin()][0])
-                bottommost  = tuple(cnt[cnt[:,:,1].argmax()][0])
-                leftmost    = tuple(cnt[cnt[:,:,0].argmin()][0])
-                rightmost   = tuple(cnt[cnt[:,:,0].argmax()][0])
-                val = (topmost, rightmost, bottommost, leftmost)
-            elif name == 'MinorAxisLength':
-                val = b
-            elif name == 'MajorAxisLength':
-                val = a
-            elif name == 'Orientation':
-                val = angle
-            elif name == 'Perimeter':
-                val = cv2.arcLength(cnt, closed=True)
-            elif name == 'Solidity':
-                val = float(area) / cv2.contourArea(hull)
+                    ellipse = centroid = b = a = angle = None
 
-            props[name] = val
-        stats.append(props)
-    return stats
+            # Call cv2.convexHull if needed.
+            match = ('ConvexHull', 'ConvexArea', 'Solidity')
+            if any(p in match for p in properties):
+                hull = cv2.convexHull(cnt)
+
+            # Call cv2.contourArea if needed.
+            match = ('Area', 'EquivDiameter', 'Extent')
+            if any(p in match for p in properties):
+                area = cv2.contourArea(cnt)
+                if not area > 0:
+                    continue
+
+            # Call cv2.minAreaRect if needed.
+            match = ('BoundingBox', 'Extent')
+            if any(p in match for p in properties):
+                min_area_rect = cv2.minAreaRect(cnt)
+
+            props = {}
+            for name in properties:
+                val = None
+                if name == 'Area':
+                    val = area
+                elif name == 'BoundingBox':
+                    val = min_area_rect
+                elif name == 'BoundingRect':
+                    val = cv2.boundingRect(cnt)
+                elif name == 'Centroid':
+                    val = centroid
+                elif name == 'ConvexArea':
+                    val = cv2.contourArea(hull)
+                elif name == 'ConvexHull':
+                    val = hull
+                elif name == 'Eccentricity':
+                    if ellipse == None:
+                        val = None
+                    else:
+                        f = math.sqrt(math.pow(a, 2) - math.pow(b, 2))
+                        val = float(f) / a
+                elif name == 'Ellipse':
+                    val = ellipse
+                elif name == 'EquivDiameter':
+                    val = math.sqrt(4 * area / math.pi)
+                elif name == 'Extent':
+                    (x,y), (w,h), _ = min_area_rect
+                    rect_area = w * h
+                    val = float(area) / rect_area
+                elif name == 'Extrema':
+                    topmost     = tuple(cnt[cnt[:,:,1].argmin()][0])
+                    bottommost  = tuple(cnt[cnt[:,:,1].argmax()][0])
+                    leftmost    = tuple(cnt[cnt[:,:,0].argmin()][0])
+                    rightmost   = tuple(cnt[cnt[:,:,0].argmax()][0])
+                    val = (topmost, rightmost, bottommost, leftmost)
+                elif name == 'MinorAxisLength':
+                    val = b
+                elif name == 'MajorAxisLength':
+                    val = a
+                elif name == 'Orientation':
+                    val = angle
+                elif name == 'Perimeter':
+                    val = cv2.arcLength(cnt, closed=True)
+                elif name == 'Solidity':
+                    val = float(area) / cv2.contourArea(hull)
+
+                props[name] = val
+            stats.append(props)
+        return stats
 
 def shape_outline(contour, k=10):
     """Returns a shape outline feature from a contour.
