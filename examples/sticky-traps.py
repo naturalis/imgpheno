@@ -76,7 +76,7 @@ def find_insects(img_file):
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     # Calls the function that detects the trap based on the HSV image.
     mask = hsv_threshold(hsv)
-    # finds the four corners based on an approximation of the contour of the mask.
+    # Finds the four corners based on an approximation of the contour of the mask.
     corners = imgpheno.find_corners(mask)
     width = 4 * yml.trap_dimensions.Trap_width
     height = 4 * yml.trap_dimensions.Trap_height
@@ -87,7 +87,7 @@ def find_insects(img_file):
     except:
         message = "Analyis not possible of file " + img_file.replace("images/", "") + "\n"
         trap = None
-    # This code shows the corners returned by find_corners, in case not exactly 4 were returned.
+    # This code returns None for the contours, in case not exactly 4 were returned.
     if trap is None:
         contours = None
         trap = None
