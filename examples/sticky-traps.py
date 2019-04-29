@@ -183,7 +183,7 @@ def run_analysis(contours, filename, message):
                 average_area = np.mean(areas)
                 number_of_insects = (len(b_0_1) + len(b_1_4) + len(b_4_7) + len(b_7_12) + len(larger_12))
                 print """There are %s insects on the trap in %s.
-    The average area of the insects in %s is %d mm square.
+    The average area of the insects in %s is %f mm square.
     The number of insects between 0 and 1 mm is %s
     The number of insects between 1 and 4 mm is %s
     The number of insects between 4 and 7 mm is %s
@@ -192,7 +192,7 @@ def run_analysis(contours, filename, message):
             """ % (number_of_insects, filename, filename,
                    (average_area / 4), len(b_0_1), len(b_1_4), len(b_4_7), len(b_7_12), len(larger_12))
 
-                results = """%s \t %s \t %d \t %s \t %s \t %s \t %s \t %s
+                results = """%s \t %s \t %f \t %s \t %s \t %s \t %s \t %s
             """ % (filename, number_of_insects, (average_area / 4), len(b_0_1),
                    len(b_1_4), len(b_4_7), len(b_7_12), len(larger_12))
 
