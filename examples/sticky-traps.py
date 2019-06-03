@@ -25,26 +25,18 @@ image_list = []
 # result file at all. It adds the images to a global list.
 def main():
     path = "images"
-    if yml.result_file == "":
-        pass
-    else:
-        open(yml.result_file, "w")
-        resultfile = open(yml.result_file, "a+")
-        if yml.detailed_size_classes is True:
-            resultfile.write("File \t Total number of insects \t Average area \t Between 0 and 1mm \
-\t Between 1 and 4mm \t Between 4 and 7mm \t Between 7 and 12mm \t Larger than 12mm \n")
-            resultfile.close()
-        else:
-            resultfile.write(
-                "File \t Total number of insects \t Average area \t Smaller \
-than 4mm \t Between 4 and 10mm \t Larger than 10mm \n")
-            resultfile.close()
 
+	# write header
+    if yml.detailed_size_classes is True:
+        print("File \t Total number of insects \t Average area \t Between 0 and 1mm \t Between 1 and 4mm \t Between 4 and 7mm \t Between 7 and 12mm \t Larger than 12mm \n")
+    else:
+        print("File \t Total number of insects \t Average area \t Smaller than 4mm \t Between 4 and 10mm \t Larger than 10mm \n")
+
+	# scan path for images
     image_files = get_image_paths(path)
     for img in image_files:
         contours, trap, message = find_insects(img)
         run_analysis(contours, img, message)
-
 
 # Returns a list of all images present in the directory 'path'. Returns an error message when no images are found.
 def get_image_paths(path):
@@ -158,12 +150,7 @@ def run_analysis(contours, filename, message):
     filename = filename.replace("images\\", "").replace("images/", "")
     if message != "":
         results = message
-        if yml.result_file == "":
-            pass
-        else:
-            resultfile = open(yml.result_file, "a+")
-            resultfile.write(str(results))
-            resultfile.close()
+        print(str(results))
     else:
         properties = imgpheno.contour_properties(contours, ('Area', 'MajorAxisLength',))
         if properties is None:
@@ -182,26 +169,12 @@ def run_analysis(contours, filename, message):
                 areas = [i['Area'] for i in properties]
                 average_area = np.mean(areas)
                 number_of_insects = (len(b_0_1) + len(b_1_4) + len(b_4_7) + len(b_7_12) + len(larger_12))
-                print """There are %s insects on the trap in %s.
-    The average area of the insects in %s is %f mm square.
-    The number of insects between 0 and 1 mm is %s
-    The number of insects between 1 and 4 mm is %s
-    The number of insects between 4 and 7 mm is %s
-    The number of insects between 7 and 12 mm is %s
-    The number of insects larger than 12 mm is %s
-            """ % (number_of_insects, filename, filename,
-                   (average_area / 4), len(b_0_1), len(b_1_4), len(b_4_7), len(b_7_12), len(larger_12))
 
                 results = """%s \t %s \t %f \t %s \t %s \t %s \t %s \t %s
             """ % (filename, number_of_insects, (average_area / 4), len(b_0_1),
                    len(b_1_4), len(b_4_7), len(b_7_12), len(larger_12))
 
-                if yml.result_file == "":
-                    pass
-                else:
-                    resultfile = open(yml.result_file, "a+")
-                    resultfile.write(str(results.replace("    ", "")))
-                    resultfile.close()
+                print(str(results.replace("    ", "")))
 
             else:
                 smaller_than_4 = [i for i in major_axes if 4 <= i < 15]
@@ -212,25 +185,12 @@ def run_analysis(contours, filename, message):
                 average_area = np.mean(areas)
                 number_of_insects = (len(smaller_than_4) + len(between_4_and_10) + len(larger_than_10))
 
-                print """There are %s insects on the trap in %s.
-    The average area of the insects in %s is %d mm square.
-    The number of insects smaller than 4 mm is %s
-    The number of insects between 4 and 10 mm is %s
-    The number of insects larger than 10 mm is %s
-                """ % (number_of_insects, filename, filename,
-                       (average_area / 4), len(smaller_than_4), len(between_4_and_10), len(larger_than_10))
-
                 results = """%s \t %s \t %d \t %s \t %s \t %s
             """ % (filename, number_of_insects, (average_area / 4),
                    len(smaller_than_4),
                    len(between_4_and_10), len(larger_than_10))
 
-                if yml.result_file == "":
-                    pass
-                else:
-                    resultfile = open(yml.result_file, "a+")
-                    resultfile.write(str(results.replace("    ", "")))
-                    resultfile.close()
+                print(str(results.replace("    ", "")))
 
 
 # Opens the YAML file to create a DictObject of the settings that were set in the YAML file. Returns an error message if
