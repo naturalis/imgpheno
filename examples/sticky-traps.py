@@ -14,6 +14,7 @@ import cv2
 import numpy as np
 import yaml
 import imgpheno
+import sys
 
 
 # List to hold the images.
@@ -28,9 +29,11 @@ def main():
 
 	# write header
     if yml.detailed_size_classes is True:
-        print("File \t Total number of insects \t Average area \t Between 0 and 1mm \t Between 1 and 4mm \t Between 4 and 7mm \t Between 7 and 12mm \t Larger than 12mm \n")
+        sys.stdout.write("File \t Total number of insects \t Average area \t Between 0 and 1mm \t Between 1 and 4mm \t Between 4 and 7mm \t Between 7 and 12mm \t Larger than 12mm \n")
+        sys.stdout.flush()
     else:
-        print("File \t Total number of insects \t Average area \t Smaller than 4mm \t Between 4 and 10mm \t Larger than 10mm \n")
+        sys.stdout.write("File \t Total number of insects \t Average area \t Smaller than 4mm \t Between 4 and 10mm \t Larger than 10mm \n")
+        sys.stdout.flush()
 
 	# scan path for images
     image_files = get_image_paths(path)
@@ -150,7 +153,8 @@ def run_analysis(contours, filename, message):
     filename = filename.replace("images\\", "").replace("images/", "")
     if message != "":
         results = message
-        print(str(results))
+        sys.stdout.write(str(results))
+        sys.stdout.flush()
     else:
         properties = imgpheno.contour_properties(contours, ('Area', 'MajorAxisLength',))
         if properties is None:
@@ -174,7 +178,8 @@ def run_analysis(contours, filename, message):
             """ % (filename, number_of_insects, (average_area / 4), len(b_0_1),
                    len(b_1_4), len(b_4_7), len(b_7_12), len(larger_12))
 
-                print(str(results.replace("    ", "")))
+                sys.stdout.write(str(results.replace("    ", "")))
+                sys.stdout.flush()
 
             else:
                 smaller_than_4 = [i for i in major_axes if 4 <= i < 15]
@@ -190,7 +195,8 @@ def run_analysis(contours, filename, message):
                    len(smaller_than_4),
                    len(between_4_and_10), len(larger_than_10))
 
-                print(str(results.replace("    ", "")))
+                sys.stdout.write(str(results.replace("    ", "")))
+                sys.stdout.flush()
 
 
 # Opens the YAML file to create a DictObject of the settings that were set in the YAML file. Returns an error message if
@@ -201,7 +207,7 @@ def open_yaml(path):
         return None
 
     f = open(path, 'r')
-    yml = yaml.load(f)
+    yml = yaml.load(f, Loader=yaml.FullLoader)
     yml = common.DictObject(yml)
     f.close()
 
