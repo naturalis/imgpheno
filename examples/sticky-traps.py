@@ -24,7 +24,7 @@ image_list = []
 # create a result file and write the headers, in normal size classes or detailed size classes, or to not create a
 # result file at all. It adds the images to a global list.
 def main():
-    path = "images/sticky-traps"
+    path = "images"
     if yml.result_file == "":
         pass
     else:
@@ -155,7 +155,7 @@ def crop_image(img):
 # Uses the detected contours of the insects to determine the size and count the number of insects found for each size
 # class. Writes the results in a result file, for normal size classes or detailed size classes, if set in the YAML file.
 def run_analysis(contours, filename, message):
-    filename = filename.replace("images/sticky-traps\\", "").replace("images/sticky-traps/", "")
+    filename = filename.replace("images\\", "").replace("images/", "")
     if message != "":
         results = message
         if yml.result_file == "":
