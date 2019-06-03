@@ -7,3 +7,7 @@ dist/
 docs/_build/
 imgpheno.egg-info/
 .idea
+.DS_Store
+*.JPG
+*.zip
+.gitignore
