@@ -1,0 +1,57 @@
+# This file contains the settings for the sticky-traps script. Here you can specify the height and the width
+# of the traps used. It is imperative that the traps have uniform dimensions, this means that the traps cannot be cut
+# by hand. The traps are also required to have no lines or text on them, unless these are on a non sticky area of the
+# trap so it can be cropped out easily.
+#
+# This file should not be altered unless the traps used have changed. It is strongly reccomended to maintain the same
+# traps during a project, as it might have an influence on the results. All measurements of size should be in
+# millimetres. The value for the colour is specified in the HSV colour space.
+
+
+##################################
+# SIZES AND COLOURS OF THE TRAPS #
+##################################
+
+# The height and width of the traps should be in millimetres, with the longest of the two measurements beeing
+# represented by the height.
+trap_dimensions:
+  Trap_height: 200
+  Trap_width: 150
+
+# If the trap has edges that can be cropped out, set to 'True'. otherwise, if the entire area of the trap
+# is sticky, set to 'False'. Reasons to crop out areas are for instance non sticky areas, or small areas of text
+# on the top and bottom of the trap.
+edges_to_crop: True
+
+# Sets the width of the area to be cropped out if the previous setting is 'true' both sides are cropped since
+# the program can't discern between the top and bottom of the trap. If for instance the width along the short edges
+# is set to 25 (mm), then the top 25mm and the bottom 25mm is cropped out of the rescaled image, so you only need to
+# enter the width you want cropped out in millimetres in the real trap.
+cropping_width:
+  along_long_edges: 0
+  along_short_edges: 18
+
+# Set the colour of the trap below as HSV colour codes, specifing the darkest (lower) and brightest (upper) of the
+# colour to be found on a trap. Use lower = [-10, 100, 100] and upper = [+10, 255, 255] respectively. A BGR colour
+# code for blue (255, 0 ,0) will result in an HSV colour code for blue (120, 255, 255). Setting this as lower and
+# upper will be "lower = [110, 100, 100] and upper = [130, 255, 255]". In sticky-traps.py there is a converter present
+# to convert BGR to HSV, in the function hsv_threshold, however to calculate the H value can also be done by converting
+# BGR to HSV online and deviding the H value by 2.
+trap_colours:
+  trap_lower: [15, 100, 100]
+  trap_upper: [45, 255, 255]
+
+# There are two possible options to determine the sizes of the insects found on the traps. Setting detailed_size_classes
+# to True will enable the detailed sizing classes: 0-1mm, 1-4mm, 4-7mm, 7-12mm, and >12mm. Setting detailed_size_classes
+# to False will enable the standard sizing classes: <4mm, 4-10, and >10mm.
+detailed_size_classes: False
+
+# Set a file below to get the results in the specified file. If no file is set the results will only be printed on the
+# commandline. The file will be created and results will be printed in tab delimited format, with the headers: File,
+# Total number of insects, Average area, Smaller than 4mm, Between 4 and 10mm, Larger than 10mm or, when detailed size
+# classes are set True: File, Total number of insects, Average area, Between 0 and 1mm, Between 1 and 4mm,
+# Between 4 and 7mm, Between 7 and 12mm, and Larger than 12mm. If there is no need for a file to save the results in a
+# file set result_file to result_file: ""
+# !!Each time sticky-traps.py runs it clears the result_file!!
+result_file: "results-calibrated.tsv"
+
